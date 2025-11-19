@@ -247,7 +247,10 @@ export function GestaoPage() {
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6">
         <section className={`grid gap-4 lg:grid-cols-12 ${accentGradient} p-4 ${panelClass}`}>
           {temperatures.map((item) => (
-            <div key={item.label} className="lg:col-span-3 flex flex-col gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+            <div
+              key={item.label}
+              className="lg:col-span-3 flex flex-col gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4"
+            >
               <p className="text-[11px] uppercase tracking-[0.25em] text-emerald-300">Temperatura</p>
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold leading-tight">{item.label}</h3>
@@ -541,3 +544,5 @@ export function GestaoPage() {
     </div>
   );
 }
+
+export default GestaoPage;
