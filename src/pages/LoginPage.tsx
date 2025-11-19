@@ -1,5 +1,6 @@
 // src/pages/LoginPage.tsx
-import { FormEvent, useState } from "react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { loginWithPassword, isAuthenticated } from "../auth/auth";
 import logoSinapse from "../assets/sinapse-logo-horizontal.png";

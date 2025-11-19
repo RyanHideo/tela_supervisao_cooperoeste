@@ -1,6 +1,4 @@
 // src/components/motors/MotorLoadGauge.tsx
-import React from "react";
-
 type Props = {
   percent: number; // 0-100
 };
