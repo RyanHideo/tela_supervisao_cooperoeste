@@ -1,5 +1,5 @@
 // src/components/motors/MotorsPage.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { MotorDetailsModal } from "./MotorDetailsModal";
 import type { CcmConfig } from "../../config/ccm";
 import { useTheme } from "../../theme/ThemeContext";
