@@ -1,5 +1,5 @@
 // src/components/motors/MotorDetailsModal.tsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "../../theme/ThemeContext";
 import type { MotorSummary } from "./MotorsPage";
 
