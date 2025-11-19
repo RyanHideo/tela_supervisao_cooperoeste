@@ -134,6 +134,21 @@ export function PageShell({ children, config, section = "dashboard" }: Props) {
             })}
           </div>
 
+          {/* Link para a nova página de gestão geral */}
+          <button
+            onClick={() => navigate("/gestao")}
+            className={
+              chipBase +
+              " " +
+              (isDark
+                ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400 hover:bg-emerald-500/20"
+                : "border-emerald-600/50 bg-emerald-50 text-emerald-700 hover:border-emerald-600 hover:bg-emerald-100")
+            }
+            title="Ir para a visão geral dos dois CCMs"
+          >
+            Gestão
+          </button>
+
           {/* Botão de tema */}
           <button
             onClick={toggleTheme}

@@ -29,6 +29,11 @@ export function Dashboard({ config }: Props) {
   const m = meta ?? {};
   const prefix = config.key.toUpperCase(); // "CCM1" ou "CCM2"
 
+  const getNumber = (key: string) => {
+    const raw = v[key];
+    return typeof raw === "number" ? raw : undefined;
+  };
+
   const pageClass = isDark
     ? "min-h-screen bg-slate-950 text-slate-100"
     : "min-h-screen bg-slate-100 text-slate-900";
@@ -66,7 +71,9 @@ export function Dashboard({ config }: Props) {
       label: "Conectado ao CLP",
       color: isDark ? "text-emerald-300" : "text-emerald-600",
       dot: isDark ? "bg-emerald-400" : "bg-emerald-500",
-      helper: `Última atualização: ${new Date(ts).toLocaleTimeString()}`,
+      helper: ts
+        ? `Última atualização: ${new Date(ts).toLocaleTimeString()}`
+        : "Última atualização indisponível",
     };
   }, [error, hasData, ts, isDark]);
 
@@ -411,13 +418,13 @@ export function Dashboard({ config }: Props) {
             </div>
 
             <div className="mt-3">
-              <TagValueCard
-                label=""
-                value={v[`${prefix}_POTENCIA`]}
-                unit="kVA"
-                decimals={1}
-                quality={m[`${prefix}_POTENCIA`]?.quality}
-              />
+                <TagValueCard
+                  label=""
+                  value={getNumber(`${prefix}_POTENCIA`)}
+                  unit="kVA"
+                  decimals={1}
+                  quality={m[`${prefix}_POTENCIA`]?.quality}
+                />
             </div>
           </div>
 
@@ -434,13 +441,13 @@ export function Dashboard({ config }: Props) {
             </div>
 
             <div className="mt-3">
-              <TagValueCard
-                label=""
-                value={v[`${prefix}_FATOR_POTENCIA`]}
-                unit="cos φ"
-                decimals={2}
-                quality={m[`${prefix}_FATOR_POTENCIA`]?.quality}
-              />
+                <TagValueCard
+                  label=""
+                  value={getNumber(`${prefix}_FATOR_POTENCIA`)}
+                  unit="cos φ"
+                  decimals={2}
+                  quality={m[`${prefix}_FATOR_POTENCIA`]?.quality}
+                />
             </div>
           </div>
 
@@ -457,13 +464,13 @@ export function Dashboard({ config }: Props) {
             </div>
 
             <div className="mt-3">
-              <TagValueCard
-                label=""
-                value={v[`${prefix}_FREQUENCIA`]}
-                unit="Hz"
-                decimals={1}
-                quality={m[`${prefix}_FREQUENCIA`]?.quality}
-              />
+                <TagValueCard
+                  label=""
+                  value={getNumber(`${prefix}_FREQUENCIA`)}
+                  unit="Hz"
+                  decimals={1}
+                  quality={m[`${prefix}_FREQUENCIA`]?.quality}
+                />
             </div>
           </div>
         </section>
@@ -483,13 +490,13 @@ export function Dashboard({ config }: Props) {
             </div>
 
             <div className="mt-3">
-              <TagValueCard
-                label=""
-                value={v[`${prefix}_CONSUMO_TOTAL`]}
-                unit="kWh"
-                decimals={0}
-                quality={m[`${prefix}_CONSUMO_TOTAL`]?.quality}
-              />
+                <TagValueCard
+                  label=""
+                  value={getNumber(`${prefix}_CONSUMO_TOTAL`)}
+                  unit="kWh"
+                  decimals={0}
+                  quality={m[`${prefix}_CONSUMO_TOTAL`]?.quality}
+                />
             </div>
           </div>
 
@@ -508,13 +515,13 @@ export function Dashboard({ config }: Props) {
             </div>
 
             <div className="mt-3">
-              <TagValueCard
-                label=""
-                value={v[`${prefix}_TEMP_PAINEL`]}
-                unit="°C"
-                decimals={1}
-                quality={m[`${prefix}_TEMP_PAINEL`]?.quality}
-              />
+                <TagValueCard
+                  label=""
+                  value={getNumber(`${prefix}_TEMP_PAINEL`)}
+                  unit="°C"
+                  decimals={1}
+                  quality={m[`${prefix}_TEMP_PAINEL`]?.quality}
+                />
             </div>
           </div>
         </section>
