@@ -1,5 +1,4 @@
 // src/App.tsx
-import React from "react";
 import {
   BrowserRouter,
   Routes,
@@ -11,6 +10,7 @@ import { PageShell } from "./components/layout/PageShell";
 import { Dashboard } from "./components/dashboard/Dashboard";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
+import { GestaoPage } from "./pages/GestaoPage";
 import {
   CCM_CONFIGS,
   DEFAULT_CCM,
@@ -69,6 +69,16 @@ export default function App() {
       <Routes>
         {/* Login público */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Página de gestão geral (TV) */}
+        <Route
+          path="/gestao"
+          element={
+            <ProtectedRoute>
+              <GestaoPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Redireciona "/" para o CCM default (dashboard) */}
         <Route
