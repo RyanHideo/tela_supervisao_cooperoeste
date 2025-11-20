@@ -78,7 +78,7 @@ function ElevatorsChart({ values, isDark }: ElevatorsChartProps) {
               className="flex-1 flex flex-col items-center justify-end gap-1 h-full"
             >
               <div className="flex-1 flex flex-col items-center justify-end">
-                <span className="text-xs sm:text-sm xl:text-base text-slate-700 font-semibold mb-1">
+                <span className="text-xs sm:text-sm xl:text-base text-slate-300 font-semibold mb-1">
                   {clamped.toFixed(0)}%
                 </span>
                 <div
@@ -159,7 +159,7 @@ function MotorsDonut({ active, alarm, off, isDark }: MotorsDonutProps) {
       </div>
 
       {/* Legenda ao lado, com números e % */}
-      <div className="flex flex-col gap-2 text-xs sm:text-sm md:text-[18px] text-slate-600">
+      <div className="flex flex-col gap-2 text-xs sm:text-sm md:text-[18px] text-slate-300">
         <div className="flex items-center gap-2">
           <span
             className="w-2.5 h-2.5 rounded-full"
@@ -191,7 +191,6 @@ function MotorsDonut({ active, alarm, off, isDark }: MotorsDonutProps) {
     </div>
   );
 }
-
 
 /** Helpers para os gauges semicirculares */
 
@@ -262,11 +261,9 @@ function PowerFactorGauge({
   const cx = 100;
   const cy = 100;
   const rOuter = 80;
-  const rBase = 55;
   const pointerLen = 70;
 
   const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
-  const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
   return (
@@ -287,13 +284,15 @@ function PowerFactorGauge({
           </linearGradient>
         </defs>
 
+        {/* trilho cinza */}
         <path
           d={arcPathOuter}
-          stroke="#e5e7eb"
+          stroke="#1f2933"
           strokeWidth={18}
           fill="none"
           strokeLinecap="round"
         />
+        {/* arco colorido */}
         <path
           d={arcPathOuter}
           stroke={`url(#${gradId})`}
@@ -301,31 +300,32 @@ function PowerFactorGauge({
           fill="none"
           strokeLinecap="round"
         />
-        <path
-          d={arcPathBase}
-          stroke="#f9fafb"
-          strokeWidth={24}
-          fill="none"
-          strokeLinecap="round"
-        />
 
+        {/* ponteiro branco */}
         <line
           x1={cx}
           y1={cy}
           x2={pointerTip.x}
           y2={pointerTip.y}
-          stroke="#111827"
+          stroke="#ffffff"
           strokeWidth={4}
           strokeLinecap="round"
         />
-        <circle cx={cx} cy={cy} r={5} fill="#111827" />
+        <circle
+          cx={cx}
+          cy={cy}
+          r={5}
+          fill="#ffffff"
+          stroke="rgba(15,23,42,0.8)"
+          strokeWidth={1}
+        />
       </svg>
 
       <div className="flex flex-col items-center -mt-2">
         <div className="px-4 py-1.5 rounded-full bg-slate-900 text-slate-50 text-sm sm:text-base font-semibold shadow-md">
           {display}
         </div>
-        <span className="mt-1 text-[11px] text-slate-600 uppercase tracking-wide">
+        <span className="mt-1 text-[11px] text-slate-400 uppercase tracking-wide">
           FP
         </span>
       </div>
@@ -355,11 +355,9 @@ function ApparentPowerGauge({ value, max }: ApparentPowerGaugeProps) {
   const cx = 100;
   const cy = 100;
   const rOuter = 80;
-  const rBase = 55;
   const pointerLen = 70;
 
   const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
-  const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
   return (
@@ -381,13 +379,15 @@ function ApparentPowerGauge({ value, max }: ApparentPowerGaugeProps) {
           </linearGradient>
         </defs>
 
+        {/* trilho cinza */}
         <path
           d={arcPathOuter}
-          stroke="#e5e7eb"
+          stroke="#1f2933"
           strokeWidth={18}
           fill="none"
           strokeLinecap="round"
         />
+        {/* arco colorido */}
         <path
           d={arcPathOuter}
           stroke={`url(#${gradId})`}
@@ -395,31 +395,32 @@ function ApparentPowerGauge({ value, max }: ApparentPowerGaugeProps) {
           fill="none"
           strokeLinecap="round"
         />
-        <path
-          d={arcPathBase}
-          stroke="#f9fafb"
-          strokeWidth={26}
-          fill="none"
-          strokeLinecap="round"
-        />
 
+        {/* ponteiro branco */}
         <line
           x1={cx}
           y1={cy}
           x2={pointerTip.x}
           y2={pointerTip.y}
-          stroke="#111827"
+          stroke="#ffffff"
           strokeWidth={4}
           strokeLinecap="round"
         />
-        <circle cx={cx} cy={cy} r={5} fill="#111827" />
+        <circle
+          cx={cx}
+          cy={cy}
+          r={5}
+          fill="#ffffff"
+          stroke="rgba(15,23,42,0.8)"
+          strokeWidth={1}
+        />
       </svg>
 
       <div className="flex flex-col items-center -mt-1">
         <div className="px-4 py-1.5 rounded-full bg-slate-900 text-slate-50 text-sm sm:text-base font-semibold shadow-md">
           {displayValue} kVA
         </div>
-        <span className="mt-1 text-[11px] sm:text-xs text-slate-600">
+        <span className="mt-1 text-[11px] sm:text-xs text-slate-400">
           {pct}% da capacidade
         </span>
       </div>
@@ -533,31 +534,29 @@ export function ManagementPage() {
           </section>
 
           {/* Motores */}
-{/* Motores */}
-<section
-  className={`${cardBase} ${
-    isDark ? cardDark : cardLight
-  } xl:col-span-2 min-h-[190px]`}
->
-  <header className="flex items-center justify-between mb-2">
-    <h2 className="text-base sm:text-lg font-semibold tracking-tight">
-      Motores
-    </h2>
-    <span className="text-[11px] sm:text-xs uppercase tracking-wide text-slate-500">
-      Total
-    </span>
-  </header>
+          <section
+            className={`${cardBase} ${
+              isDark ? cardDark : cardLight
+            } xl:col-span-2 min-h-[190px]`}
+          >
+            <header className="flex items-center justify-between mb-2">
+              <h2 className="text-base sm:text-lg font-semibold tracking-tight">
+                Motores
+              </h2>
+              <span className="text-[11px] sm:text-xs uppercase tracking-wide text-slate-500">
+                Total
+              </span>
+            </header>
 
-  <div className="flex-1 flex items-center justify-center">
-    <MotorsDonut
-      active={mockMotors.active}
-      alarm={mockMotors.alarm}
-      off={mockMotors.off}
-      isDark={isDark}
-    />
-  </div>
-</section>
-
+            <div className="flex-1 flex items-center justify-center">
+              <MotorsDonut
+                active={mockMotors.active}
+                alarm={mockMotors.alarm}
+                off={mockMotors.off}
+                isDark={isDark}
+              />
+            </div>
+          </section>
 
           {/* Elevadores */}
           <section

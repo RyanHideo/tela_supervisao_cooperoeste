@@ -63,15 +63,12 @@ const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
           <img
             src={logo}
             alt="Sinapse Soluções e Automação"
-            className="h-10 w-auto sm:h-16"
+            className="h-15 w-auto sm:h-20"
           />
           <div className="hidden sm:block">
             <h1 className="text-sm font-semibold tracking-tight">
               Painel de Gestão • CooperOeste • {config.displayName}
             </h1>
-            <p className="text-[11px] text-slate-400">
-              Monitoramento em tempo real dos dados do CLP
-            </p>
           </div>
         </div>
 
