@@ -23,8 +23,11 @@ function EfficiencyDonut({ value, isDark }: EfficiencyDonutProps) {
     ${trackColor} ${visual * 3.6}deg 360deg
   )`;
 
+  const labelColor = isDark ? "text-slate-300" : "text-slate-700";
+  const descColor = isDark ? "text-slate-400" : "text-slate-700";
+
   return (
-    <div className="flex flex-col items-center justify-center gap-3 h-full">
+    <div className="flex items-center justify-center gap-6 h-full">
       <div
         className="relative w-32 h-32 sm:w-36 sm:h-36 xl:w-40 xl:h-40 rounded-full"
         style={{ backgroundImage: bg }}
@@ -33,15 +36,20 @@ function EfficiencyDonut({ value, isDark }: EfficiencyDonutProps) {
           className="absolute inset-5 sm:inset-6 rounded-full flex flex-col items-center justify-center"
           style={{ backgroundColor: bgColor }}
         >
-          <span className="text-[11px] sm:text-xs tracking-[0.18em] uppercase text-slate-500">
-            Eficiência
+          <span
+            className={`text-[11px] sm:text-xs tracking-[0.18em] uppercase ${labelColor}`}
+          >
+            
           </span>
           <span className="text-3xl sm:text-4xl xl:text-5xl font-semibold">
             {clamped.toFixed(0)}%
           </span>
         </div>
       </div>
-      <span className="text-[11px] sm:text-xs text-slate-500 text-center">
+
+      <span
+        className={`max-w-[220px] text-[11px] sm:text-xs text-left ${descColor}`}
+      >
         Indicador global de eficiência dos equipamentos.
       </span>
     </div>
@@ -57,6 +65,11 @@ type ElevatorsChartProps = {
 
 function ElevatorsChart({ values, isDark }: ElevatorsChartProps) {
   const accent = isDark ? "#38bdf8" : "#0284c7";
+
+  // >>> cores apenas de texto, mudando com o tema
+  const valueColor = isDark ? "text-slate-100" : "text-slate-700"; // 80%, 55%...
+  const labelColor = isDark ? "text-slate-200" : "text-slate-500"; // E1, E2...
+  const footerColor = isDark ? "text-slate-200" : "text-slate-700";
 
   return (
     <div className="mt-3 flex flex-col gap-4 h-48 sm:h-52 xl:h-56 px-3">
@@ -78,7 +91,9 @@ function ElevatorsChart({ values, isDark }: ElevatorsChartProps) {
               className="flex-1 flex flex-col items-center justify-end gap-1 h-full"
             >
               <div className="flex-1 flex flex-col items-center justify-end">
-                <span className="text-xs sm:text-sm xl:text-base text-slate-300 font-semibold mb-1">
+                <span
+                  className={`text-xs sm:text-sm xl:text-base font-semibold mb-1 ${valueColor}`}
+                >
                   {clamped.toFixed(0)}%
                 </span>
                 <div
@@ -94,7 +109,9 @@ function ElevatorsChart({ values, isDark }: ElevatorsChartProps) {
                   }}
                 />
               </div>
-              <span className="text-[10px] sm:text-xs xl:text-sm text-slate-500 mt-1">
+              <span
+                className={`text-[10px] sm:text-xs xl:text-sm mt-1 ${labelColor}`}
+              >
                 E{idx + 1}
               </span>
             </div>
@@ -102,7 +119,9 @@ function ElevatorsChart({ values, isDark }: ElevatorsChartProps) {
         })}
       </div>
 
-      <div className="flex justify-between text-[10px] sm:text-xs xl:text-sm text-slate-500">
+      <div
+        className={`flex justify-between text-[10px] sm:text-xs xl:text-sm ${footerColor}`}
+      >
         <span>Elevadores 1–12</span>
         <span>Valores em % de carga (0–100%)</span>
       </div>
@@ -137,6 +156,7 @@ function MotorsDonut({ active, alarm, off, isDark }: MotorsDonutProps) {
   )`;
 
   const donutBg = isDark ? "#020617" : "#f9fafb";
+  const legendColor = isDark ? "text-slate-300" : "text-slate-700";
 
   return (
     <div className="flex flex-row items-center justify-center gap-6 xl:gap-10">
@@ -159,7 +179,9 @@ function MotorsDonut({ active, alarm, off, isDark }: MotorsDonutProps) {
       </div>
 
       {/* Legenda ao lado, com números e % */}
-      <div className="flex flex-col gap-2 text-xs sm:text-sm md:text-[18px] text-slate-300">
+      <div
+        className={`flex flex-col gap-2 text-xs sm:text-sm md:text-base ${legendColor}`}
+      >
         <div className="flex items-center gap-2">
           <span
             className="w-2.5 h-2.5 rounded-full"
@@ -243,12 +265,14 @@ type PowerFactorGaugeProps = {
   value: number;
   min?: number;
   max?: number;
+  isDark: boolean;
 };
 
 function PowerFactorGauge({
   value,
   min = 0.7,
   max = 1.05,
+  isDark,
 }: PowerFactorGaugeProps) {
   const gradId = React.useId();
   const { polarToCartesian, describeArc } = useArcHelpers();
@@ -261,10 +285,20 @@ function PowerFactorGauge({
   const cx = 100;
   const cy = 100;
   const rOuter = 80;
+  const rBase = 55;
   const pointerLen = 70;
 
   const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
+  const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
+
+  const outerTrackColor = isDark ? "#1f2937" : "#e5e7eb";
+  const baseColor = isDark ? "#020617" : "#f9fafb";
+  const pointerColor = isDark ? "#f9fafb" : "#111827";
+  const valueBg = isDark
+    ? "bg-slate-100 text-slate-900"
+    : "bg-slate-900 text-slate-50";
+  const labelColor = isDark ? "text-slate-300" : "text-slate-700";
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -284,15 +318,13 @@ function PowerFactorGauge({
           </linearGradient>
         </defs>
 
-        {/* trilho cinza */}
         <path
           d={arcPathOuter}
-          stroke="#1f2933"
+          stroke={outerTrackColor}
           strokeWidth={18}
           fill="none"
           strokeLinecap="round"
         />
-        {/* arco colorido */}
         <path
           d={arcPathOuter}
           stroke={`url(#${gradId})`}
@@ -300,32 +332,35 @@ function PowerFactorGauge({
           fill="none"
           strokeLinecap="round"
         />
+        <path
+          d={arcPathBase}
+          stroke={baseColor}
+          strokeWidth={24}
+          fill="none"
+          strokeLinecap="round"
+        />
 
-        {/* ponteiro branco */}
         <line
           x1={cx}
           y1={cy}
           x2={pointerTip.x}
           y2={pointerTip.y}
-          stroke="#ffffff"
+          stroke={pointerColor}
           strokeWidth={4}
           strokeLinecap="round"
         />
-        <circle
-          cx={cx}
-          cy={cy}
-          r={5}
-          fill="#ffffff"
-          stroke="rgba(15,23,42,0.8)"
-          strokeWidth={1}
-        />
+        <circle cx={cx} cy={cy} r={5} fill={pointerColor} />
       </svg>
 
       <div className="flex flex-col items-center -mt-2">
-        <div className="px-4 py-1.5 rounded-full bg-slate-900 text-slate-50 text-sm sm:text-base font-semibold shadow-md">
+        <div
+          className={`px-4 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg}`}
+        >
           {display}
         </div>
-        <span className="mt-1 text-[11px] text-slate-400 uppercase tracking-wide">
+        <span
+          className={`mt-1 text-[11px] uppercase tracking-wide ${labelColor}`}
+        >
           FP
         </span>
       </div>
@@ -338,9 +373,10 @@ function PowerFactorGauge({
 type ApparentPowerGaugeProps = {
   value: number;
   max: number;
+  isDark: boolean;
 };
 
-function ApparentPowerGauge({ value, max }: ApparentPowerGaugeProps) {
+function ApparentPowerGauge({ value, max, isDark }: ApparentPowerGaugeProps) {
   const gradId = React.useId();
   const { polarToCartesian, describeArc } = useArcHelpers();
 
@@ -355,10 +391,20 @@ function ApparentPowerGauge({ value, max }: ApparentPowerGaugeProps) {
   const cx = 100;
   const cy = 100;
   const rOuter = 80;
+  const rBase = 55;
   const pointerLen = 70;
 
   const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
+  const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
+
+  const outerTrackColor = isDark ? "#1f2937" : "#e5e7eb";
+  const baseColor = isDark ? "#020617" : "#f9fafb";
+  const pointerColor = isDark ? "#f9fafb" : "#111827";
+  const valueBg = isDark
+    ? "bg-slate-100 text-slate-900"
+    : "bg-slate-900 text-slate-50";
+  const labelColor = isDark ? "text-slate-300" : "text-slate-700";
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -379,15 +425,13 @@ function ApparentPowerGauge({ value, max }: ApparentPowerGaugeProps) {
           </linearGradient>
         </defs>
 
-        {/* trilho cinza */}
         <path
           d={arcPathOuter}
-          stroke="#1f2933"
+          stroke={outerTrackColor}
           strokeWidth={18}
           fill="none"
           strokeLinecap="round"
         />
-        {/* arco colorido */}
         <path
           d={arcPathOuter}
           stroke={`url(#${gradId})`}
@@ -395,32 +439,33 @@ function ApparentPowerGauge({ value, max }: ApparentPowerGaugeProps) {
           fill="none"
           strokeLinecap="round"
         />
+        <path
+          d={arcPathBase}
+          stroke={baseColor}
+          strokeWidth={26}
+          fill="none"
+          strokeLinecap="round"
+        />
 
-        {/* ponteiro branco */}
         <line
           x1={cx}
           y1={cy}
           x2={pointerTip.x}
           y2={pointerTip.y}
-          stroke="#ffffff"
+          stroke={pointerColor}
           strokeWidth={4}
           strokeLinecap="round"
         />
-        <circle
-          cx={cx}
-          cy={cy}
-          r={5}
-          fill="#ffffff"
-          stroke="rgba(15,23,42,0.8)"
-          strokeWidth={1}
-        />
+        <circle cx={cx} cy={cy} r={5} fill={pointerColor} />
       </svg>
 
       <div className="flex flex-col items-center -mt-1">
-        <div className="px-4 py-1.5 rounded-full bg-slate-900 text-slate-50 text-sm sm:text-base font-semibold shadow-md">
+        <div
+          className={`px-4 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg}`}
+        >
           {displayValue} kVA
         </div>
-        <span className="mt-1 text-[11px] sm:text-xs text-slate-400">
+        <span className={`mt-1 text-[11px] sm:text-xs ${labelColor}`}>
           {pct}% da capacidade
         </span>
       </div>
@@ -463,6 +508,9 @@ export function ManagementPage() {
   const cardDark = "bg-slate-900/70 border-slate-800";
   const cardLight = "bg-white border-slate-200";
 
+  const subtleTextClass = isDark ? "text-slate-400" : "text-slate-700";
+
+  // MOCKS temporários (depois ligamos nas tags reais)
   const mockEfficiency = 72;
   const mockElevators = [80, 55, 63, 40, 95, 70, 35, 20, 50, 60, 45, 30];
   const mockMotors = { active: 14, alarm: 2, off: 4 };
@@ -495,7 +543,9 @@ export function ManagementPage() {
               <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight">
                 Eficiência
               </h2>
-              <span className="text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide text-slate-500">
+              <span
+                className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass}`}
+              >
                 Geral
               </span>
             </header>
@@ -505,7 +555,7 @@ export function ManagementPage() {
           </section>
 
           {/* Temperaturas */}
-          <section className="flex flex-col gap-3 xl:col-span-1">
+          <section className="flex flex-col gap-12 xl:col-span-1">
             <div className={`${cardBase} ${isDark ? cardDark : cardLight}`}>
               <header className="flex items-center justify-between mb-1">
                 <h2 className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight">
@@ -543,7 +593,9 @@ export function ManagementPage() {
               <h2 className="text-base sm:text-lg font-semibold tracking-tight">
                 Motores
               </h2>
-              <span className="text-[11px] sm:text-xs uppercase tracking-wide text-slate-500">
+              <span
+                className={`text-[11px] sm:text-xs uppercase tracking-wide ${subtleTextClass}`}
+              >
                 Total
               </span>
             </header>
@@ -568,7 +620,9 @@ export function ManagementPage() {
               <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight">
                 Percentual de carga dos elevadores (1–12)
               </h2>
-              <span className="text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide text-slate-500">
+            <span
+                className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass}`}
+              >
                 Tempo real
               </span>
             </header>
@@ -583,7 +637,9 @@ export function ManagementPage() {
               </h2>
             </header>
             <div className="flex-1 flex items-center justify-center">
-              <span className="text-sm xl:text-base text-slate-500 text-center">
+              <span
+                className={`text-sm xl:text-base text-center ${subtleTextClass}`}
+              >
                 Nenhum alarme ativo. (lista geral aqui)
               </span>
             </div>
@@ -600,7 +656,9 @@ export function ManagementPage() {
             <div className="flex-1 flex flex-col justify-center gap-3">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide text-slate-500">
+                  <span
+                    className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass}`}
+                  >
                     CCM 1
                   </span>
                   <p className="text-3xl xl:text-4xl font-semibold">XX kWh</p>
@@ -615,7 +673,9 @@ export function ManagementPage() {
 
               <div className="border-t border-slate-200/60 dark:border-slate-800/70 pt-3 flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide text-slate-500">
+                  <span
+                    className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass}`}
+                  >
                     CCM 2
                   </span>
                   <p className="text-3xl xl:text-4xl font-semibold">XX kWh</p>
@@ -629,7 +689,9 @@ export function ManagementPage() {
               </div>
             </div>
 
-            <p className="mt-2 text-[11px] sm:text-xs xl:text-sm text-slate-500 leading-snug">
+            <p
+              className={`mt-2 text-[11px] sm:text-xs xl:text-sm leading-snug ${subtleTextClass}`}
+            >
               Consumo acumulado individual por CCM desde o último reset. Podemos
               adicionar um total geral aqui embaixo se desejar.
             </p>
@@ -646,20 +708,34 @@ export function ManagementPage() {
             </h2>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6 mb-1 place-items-center">
               <div className="w-full flex flex-col items-center">
-                <span className="self-start text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide text-slate-500 mb-1">
+                <span
+                  className={`self-start text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
+                >
                   CCM 1 · Trafo 1000 kVA
                 </span>
-                <ApparentPowerGauge value={mockApparent1} max={1000} />
+                <ApparentPowerGauge
+                  value={mockApparent1}
+                  max={1000}
+                  isDark={isDark}
+                />
               </div>
 
               <div className="w-full flex flex-col items-center">
-                <span className="self-start text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide text-slate-500 mb-1">
+                <span
+                  className={`self-start text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
+                >
                   CCM 2 · Trafo 1200 kVA
                 </span>
-                <ApparentPowerGauge value={mockApparent2} max={1200} />
+                <ApparentPowerGauge
+                  value={mockApparent2}
+                  max={1200}
+                  isDark={isDark}
+                />
               </div>
             </div>
-            <p className="text-[11px] sm:text-xs xl:text-sm text-slate-500">
+            <p
+              className={`text-[11px] sm:text-xs xl:text-sm ${subtleTextClass}`}
+            >
               Gauges mostram a potência aparente atual em relação à capacidade
               do trafo de cada CCM.
             </p>
@@ -677,17 +753,21 @@ export function ManagementPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col items-center">
-                <span className="text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide text-slate-500 mb-1 self-start">
+                <span
+                  className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1 self-start`}
+                >
                   CCM 1
                 </span>
-                <PowerFactorGauge value={mockFp1} />
+                <PowerFactorGauge value={mockFp1} isDark={isDark} />
               </div>
 
               <div className="flex flex-col items-center">
-                <span className="text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide text-slate-500 mb-1 self-start">
+                <span
+                  className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1 self-start`}
+                >
                   CCM 2
                 </span>
-                <PowerFactorGauge value={mockFp2} />
+                <PowerFactorGauge value={mockFp2} isDark={isDark} />
               </div>
             </div>
           </section>
