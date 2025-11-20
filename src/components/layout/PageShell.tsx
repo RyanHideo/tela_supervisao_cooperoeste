@@ -10,7 +10,7 @@ import logoDark from "../../assets/sinapse-logo-horizontal-escuro.png";
 
 import { useTheme } from "../../theme/ThemeContext";
 
-type SectionKey = "dashboard" | "motores";
+type SectionKey = "gestao" | "dashboard" | "motores";
 
 type Props = PropsWithChildren<{
   config: CcmConfig;
@@ -28,10 +28,12 @@ export function PageShell({ children, config, section = "dashboard" }: Props) {
     { key: "ccm2", label: "CCM 2" },
   ];
 
-  const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
-    { key: "dashboard", label: "Dashboard", path: `/ccm/${config.key}` },
-    { key: "motores", label: "Motores", path: `/ccm/${config.key}/motores` },
-  ];
+const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
+  { key: "gestao", label: "Gestão", path: `/ccm/${config.key}/gestao` },
+  { key: "dashboard", label: "Dashboard", path: `/ccm/${config.key}` },
+  { key: "motores", label: "Motores", path: `/ccm/${config.key}/motores` },
+];
+
 
   const rootClass = isDark
     ? "min-h-screen w-full overflow-x-hidden bg-slate-950 text-slate-50 flex flex-col"

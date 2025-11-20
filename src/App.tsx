@@ -11,6 +11,7 @@ import { Dashboard } from "./components/dashboard/Dashboard";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { GestaoPage } from "./pages/GestaoPage";
+
 import {
   CCM_CONFIGS,
   DEFAULT_CCM,
@@ -18,7 +19,7 @@ import {
   type CcmKey,
 } from "./config/ccm";
 import { MotorsPage } from "./components/motors/MotorsPage";
-
+import { ManagementPage } from "./components/management/ManagementPage";
 /* ---------- Helpers de rota ---------- */
 
 function resolveConfigFromParams(): [CcmKey | null, (typeof CCM_CONFIGS)[CcmKey] | null] {
@@ -61,6 +62,21 @@ function CcmMotorsRoute() {
   );
 }
 
+/** Rota da página de Gestão (visão agregada dos dois CCMs) */
+function CcmManagementRoute() {
+  const [id, config] = resolveConfigFromParams();
+
+  if (!id || !config) {
+    return <Navigate to={`/ccm/${DEFAULT_CCM}/gestao`} replace />;
+  }
+
+  return (
+    <PageShell config={config} section="gestao">
+      <ManagementPage />
+    </PageShell>
+  );
+}
+
 /* ---------- App ---------- */
 
 export default function App() {
@@ -76,6 +92,16 @@ export default function App() {
           element={
             <ProtectedRoute>
               <GestaoPage />
+            </ProtectedRoute>
+          }
+          
+        />
+                {/* Página de Gestão protegida */}
+        <Route
+          path="/ccm/:ccmId/gestao"
+          element={
+            <ProtectedRoute>
+              <CcmManagementRoute />
             </ProtectedRoute>
           }
         />
