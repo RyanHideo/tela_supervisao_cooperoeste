@@ -316,9 +316,9 @@ function PowerFactorGauge({
             y2="200"
             gradientUnits="userSpaceOnUse"
           >
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="50%" stopColor="#eab308" />
-            <stop offset="100%" stopColor="#ef4444" />
+            <stop offset="0%" stopColor="#ef4444" />  {/* Vermelho à esquerda */}
+            <stop offset="66%" stopColor="#22c55e" />  {/* Verde no centro/ideal */}
+            <stop offset="99%" stopColor="#f97316" />  {/* Laranja até o final */}
           </linearGradient>
         </defs>
 
