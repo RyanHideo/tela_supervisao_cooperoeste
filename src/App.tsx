@@ -10,7 +10,6 @@ import { PageShell } from "./components/layout/PageShell";
 import { Dashboard } from "./components/dashboard/Dashboard";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
-import { GestaoPage } from "./pages/GestaoPage";
 
 import {
   CCM_CONFIGS,
@@ -86,16 +85,9 @@ export default function App() {
         {/* Login público */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Página de gestão geral (TV) */}
-        <Route
-          path="/gestao"
-          element={
-            <ProtectedRoute>
-              <GestaoPage />
-            </ProtectedRoute>
-          }
+
           
-        />
+    
                 {/* Página de Gestão protegida */}
         <Route
           path="/ccm/:ccmId/gestao"
