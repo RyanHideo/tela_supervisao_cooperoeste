@@ -63,11 +63,11 @@ const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
           <img
             src={logo}
             alt="Sinapse Soluções e Automação"
-            className="h-15 w-auto sm:h-20"
+            className="h-20 w-auto sm:h-28"
           />
           <div className="hidden sm:block">
-            <h1 className="text-sm font-semibold tracking-tight">
-              Painel de Gestão • CooperOeste • {config.displayName}
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Painel de Gestão • CooperOeste 
             </h1>
           </div>
         </div>
@@ -134,19 +134,7 @@ const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
           </div>
 
           {/* Link para a nova página de gestão geral */}
-          <button
-            onClick={() => navigate("/gestao")}
-            className={
-              chipBase +
-              " " +
-              (isDark
-                ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400 hover:bg-emerald-500/20"
-                : "border-emerald-600/50 bg-emerald-50 text-emerald-700 hover:border-emerald-600 hover:bg-emerald-100")
-            }
-            title="Ir para a visão geral dos dois CCMs"
-          >
-            Gestão
-          </button>
+
 
           {/* Botão de tema */}
           <button

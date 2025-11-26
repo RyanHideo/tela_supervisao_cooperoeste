@@ -371,18 +371,15 @@ export function GestaoPage() {
           </div>
 
           <div className={`grid gap-4 ${panelClass} p-4`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Elevadores</p>
-                <h3 className="text-lg font-semibold">Média de carga</h3>
-              </div>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Elevadores</p>
+              <h3 className="text-lg font-semibold">Média de carga</h3>
               <span className="text-xs text-slate-400">Visual TV</span>
             </div>
-            <MotorLoadGauge percent={elevadorMedio ?? 0} />
-            <div className="rounded-xl bg-slate-900/60 p-3 text-sm text-slate-300">
-              <p>
-                Média calculada somente para os elevadores com leitura disponível. Ideal para deixar em exibição contínua.
-              </p>
+            <div className="flex justify-center mt-2">
+              <div className="w-full max-w-xs">
+                <MotorLoadGauge percent={elevadorMedio ?? 0} />
+              </div>
             </div>
           </div>
         </section>

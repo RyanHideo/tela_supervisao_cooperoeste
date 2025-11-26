@@ -374,9 +374,19 @@ type ApparentPowerGaugeProps = {
   value: number;
   max: number;
   isDark: boolean;
+  title?: string;
+  subtitle?: string;
+  titleInside?: boolean;
 };
 
-function ApparentPowerGauge({ value, max, isDark }: ApparentPowerGaugeProps) {
+function ApparentPowerGauge({
+  value,
+  max,
+  isDark,
+  title,
+  subtitle,
+  titleInside = false,
+}: ApparentPowerGaugeProps) {
   const gradId = React.useId();
   const { polarToCartesian, describeArc } = useArcHelpers();
 
@@ -408,67 +418,97 @@ function ApparentPowerGauge({ value, max, isDark }: ApparentPowerGaugeProps) {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <svg viewBox="0 0 200 130" className="w-36 h-auto sm:w-44 xl:w-52">
-        <defs>
-          <linearGradient
-            id={gradId}
-            x1="20"
-            y1="100"
-            x2="180"
-            y2="100"
-            gradientUnits="userSpaceOnUse"
+      <div className="relative">
+        <svg viewBox="0 0 200 130" className="w-36 h-auto sm:w-44 xl:w-52">
+          <defs>
+            <linearGradient
+              id={gradId}
+              x1="20"
+              y1="100"
+              x2="180"
+              y2="100"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0%" stopColor="#22c55e" />
+              <stop offset="40%" stopColor="#eab308" />
+              <stop offset="75%" stopColor="#eab308" />
+              <stop offset="100%" stopColor="#ef4444" />
+            </linearGradient>
+          </defs>
+
+          <path
+            d={arcPathOuter}
+            stroke={outerTrackColor}
+            strokeWidth={18}
+            fill="none"
+            strokeLinecap="round"
+          />
+          <path
+            d={arcPathOuter}
+            stroke={`url(#${gradId})`}
+            strokeWidth={14}
+            fill="none"
+            strokeLinecap="round"
+          />
+          <path
+            d={arcPathBase}
+            stroke={baseColor}
+            strokeWidth={26}
+            fill="none"
+            strokeLinecap="round"
+          />
+
+          <line
+            x1={cx}
+            y1={cy}
+            x2={pointerTip.x}
+            y2={pointerTip.y}
+            stroke={pointerColor}
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+          <circle cx={cx} cy={cy} r={5} fill={pointerColor} />
+        </svg>
+
+        {titleInside && (
+          <div
+            className="absolute left-1/2"
+            style={{ top: "48%", transform: "translate(-50%, -50%)" }}
           >
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="40%" stopColor="#eab308" />
-            <stop offset="75%" stopColor="#eab308" />
-            <stop offset="100%" stopColor="#ef4444" />
-          </linearGradient>
-        </defs>
-
-        <path
-          d={arcPathOuter}
-          stroke={outerTrackColor}
-          strokeWidth={18}
-          fill="none"
-          strokeLinecap="round"
-        />
-        <path
-          d={arcPathOuter}
-          stroke={`url(#${gradId})`}
-          strokeWidth={14}
-          fill="none"
-          strokeLinecap="round"
-        />
-        <path
-          d={arcPathBase}
-          stroke={baseColor}
-          strokeWidth={26}
-          fill="none"
-          strokeLinecap="round"
-        />
-
-        <line
-          x1={cx}
-          y1={cy}
-          x2={pointerTip.x}
-          y2={pointerTip.y}
-          stroke={pointerColor}
-          strokeWidth={4}
-          strokeLinecap="round"
-        />
-        <circle cx={cx} cy={cy} r={5} fill={pointerColor} />
-      </svg>
-
-      <div className="flex flex-col items-center -mt-1">
-        <div
-          className={`px-4 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg}`}
-        >
-          {displayValue} kVA
-        </div>
-        <span className={`mt-1 text-[11px] sm:text-xs ${labelColor}`}>
-          {pct}% da capacidade
-        </span>
+            <div className="text-center">
+              {title && (
+                <div className={`text-[10px] sm:text-xs uppercase tracking-wide ${labelColor}`}>
+                  {title}
+                </div>
+              )}
+              <div className={`px-3 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg} mt-1`}>
+                {displayValue} kVA
+              </div>
+              <div className={`mt-1 text-[11px] sm:text-xs ${labelColor}`}>
+                {pct}% da capacidade
+              </div>
+              {subtitle && (
+                <div className={`text-[11px] sm:text-xs mt-1 ${labelColor}`}>
+                  {subtitle}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {!titleInside && (
+        <div className="flex flex-col items-center -mt-1">
+          <div
+            className={`px-4 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg}`}
+          >
+            {displayValue} kVA
+          </div>
+          <span className={`mt-1 text-[11px] sm:text-xs ${labelColor}`}>
+            {pct}% da capacidade
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -559,7 +599,7 @@ export function ManagementPage() {
             <div className={`${cardBase} ${isDark ? cardDark : cardLight}`}>
               <header className="flex items-center justify-between mb-1">
                 <h2 className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight">
-                  Temperatura Painel (CCM 1)
+                  Temperatura painel (CCM 1)
                 </h2>
               </header>
               <div className="flex-1 flex items-center justify-between">
@@ -572,7 +612,7 @@ export function ManagementPage() {
             <div className={`${cardBase} ${isDark ? cardDark : cardLight}`}>
               <header className="flex items-center justify-between mb-1">
                 <h2 className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight">
-                  Temperatura Painel (CCM 2)
+                  Temperatura painel (CCM 2)
                 </h2>
               </header>
               <div className="flex-1 flex items-center justify-between">
@@ -703,13 +743,13 @@ export function ManagementPage() {
               isDark ? cardDark : cardLight
             } xl:col-span-3`}
           >
-            <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight mb-3">
+            <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight text-center mb-2">
               Potência aparente
             </h2>
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6 mb-1 place-items-center">
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="w-full flex flex-col items-center">
                 <span
-                  className={`self-start text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
+                  className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
                 >
                   CCM 1 · Trafo 1000 kVA
                 </span>
@@ -719,10 +759,9 @@ export function ManagementPage() {
                   isDark={isDark}
                 />
               </div>
-
               <div className="w-full flex flex-col items-center">
                 <span
-                  className={`self-start text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
+                  className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
                 >
                   CCM 2 · Trafo 1200 kVA
                 </span>
@@ -747,14 +786,13 @@ export function ManagementPage() {
               isDark ? cardDark : cardLight
             } xl:col-span-2`}
           >
-            <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight mb-3">
+            <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight text-center mb-2">
               Fator de potência
             </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 place-items-center">
               <div className="flex flex-col items-center">
                 <span
-                  className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1 self-start`}
+                  className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
                 >
                   CCM 1
                 </span>
@@ -763,7 +801,7 @@ export function ManagementPage() {
 
               <div className="flex flex-col items-center">
                 <span
-                  className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1 self-start`}
+                  className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
                 >
                   CCM 2
                 </span>
