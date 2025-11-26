@@ -15,7 +15,7 @@ export function MotorDonutCard({ total, ativos, falha, desligados }: Props) {
 
   const cardClass = isDark
     ? "rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 flex flex-col gap-1.5"
-    : "rounded-2xl border border-slate-200 bg-white px-3 py-2 flex flex-col gap-1.5 shadow-sm";
+    : "rounded-2xl border border-slate-200 bg-white px-3 py-2 flex flex-col gap-1.5";
 
   const textMuted = isDark ? "text-slate-400" : "text-slate-500";
 

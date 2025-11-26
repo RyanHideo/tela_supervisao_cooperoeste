@@ -282,16 +282,6 @@ function PowerFactorGauge({
   const angle = -90 + t * 180;
   const display = clamped.toFixed(2).replace(".", ",");
 
-  const cx = 100;
-  const cy = 100;
-  const rOuter = 80;
-  const rBase = 55;
-  const pointerLen = 70;
-
-  const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
-  const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
-  const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
-
   const outerTrackColor = isDark ? "#1f2937" : "#e5e7eb";
   const baseColor = isDark ? "#020617" : "#f9fafb";
   const pointerColor = isDark ? "#f9fafb" : "#111827";
@@ -300,16 +290,30 @@ function PowerFactorGauge({
     : "bg-slate-900 text-slate-50";
   const labelColor = isDark ? "text-slate-300" : "text-slate-700";
 
+  const cx = 200;
+  const cy = 200;
+  const rOuter = 160;
+  const rBase = 110;
+  const pointerLen = 140;
+
+  const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
+  const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
+  const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
+
   return (
     <div className="flex flex-col items-center gap-2">
-      <svg viewBox="0 0 200 130" className="w-36 h-auto sm:w-44 xl:w-52">
+      <svg
+        viewBox="0 0 400 260"
+        className="w-36 h-auto sm:w-44 xl:w-52"
+        shapeRendering="geometricPrecision"
+      >
         <defs>
           <linearGradient
             id={gradId}
-            x1="20"
-            y1="100"
-            x2="180"
-            y2="100"
+            x1="40"
+            y1="200"
+            x2="360"
+            y2="200"
             gradientUnits="userSpaceOnUse"
           >
             <stop offset="0%" stopColor="#22c55e" />
@@ -321,21 +325,21 @@ function PowerFactorGauge({
         <path
           d={arcPathOuter}
           stroke={outerTrackColor}
-          strokeWidth={18}
+          strokeWidth={36}
           fill="none"
           strokeLinecap="round"
         />
         <path
           d={arcPathOuter}
           stroke={`url(#${gradId})`}
-          strokeWidth={14}
+          strokeWidth={28}
           fill="none"
           strokeLinecap="round"
         />
         <path
           d={arcPathBase}
           stroke={baseColor}
-          strokeWidth={24}
+          strokeWidth={48}
           fill="none"
           strokeLinecap="round"
         />
@@ -346,10 +350,10 @@ function PowerFactorGauge({
           x2={pointerTip.x}
           y2={pointerTip.y}
           stroke={pointerColor}
-          strokeWidth={4}
+          strokeWidth={8}
           strokeLinecap="round"
         />
-        <circle cx={cx} cy={cy} r={5} fill={pointerColor} />
+        <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
       </svg>
 
       <div className="flex flex-col items-center -mt-2">
@@ -398,16 +402,6 @@ function ApparentPowerGauge({
   const displayValue = clamped.toFixed(0);
   const pct = ((clamped / max) * 100).toFixed(0);
 
-  const cx = 100;
-  const cy = 100;
-  const rOuter = 80;
-  const rBase = 55;
-  const pointerLen = 70;
-
-  const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
-  const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
-  const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
-
   const outerTrackColor = isDark ? "#1f2937" : "#e5e7eb";
   const baseColor = isDark ? "#020617" : "#f9fafb";
   const pointerColor = isDark ? "#f9fafb" : "#111827";
@@ -416,17 +410,31 @@ function ApparentPowerGauge({
     : "bg-slate-900 text-slate-50";
   const labelColor = isDark ? "text-slate-300" : "text-slate-700";
 
+  const cx = 200;
+  const cy = 200;
+  const rOuter = 160;
+  const rBase = 110;
+  const pointerLen = 140;
+
+  const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
+  const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
+  const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
+
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative">
-        <svg viewBox="0 0 200 130" className="w-36 h-auto sm:w-44 xl:w-52">
+        <svg
+          viewBox="0 0 400 260"
+          className="w-36 h-auto sm:w-44 xl:w-52"
+          shapeRendering="geometricPrecision"
+        >
           <defs>
             <linearGradient
               id={gradId}
-              x1="20"
-              y1="100"
-              x2="180"
-              y2="100"
+              x1="40"
+              y1="200"
+              x2="360"
+              y2="200"
               gradientUnits="userSpaceOnUse"
             >
               <stop offset="0%" stopColor="#22c55e" />
@@ -439,21 +447,21 @@ function ApparentPowerGauge({
           <path
             d={arcPathOuter}
             stroke={outerTrackColor}
-            strokeWidth={18}
+            strokeWidth={36}
             fill="none"
             strokeLinecap="round"
           />
           <path
             d={arcPathOuter}
             stroke={`url(#${gradId})`}
-            strokeWidth={14}
+            strokeWidth={28}
             fill="none"
             strokeLinecap="round"
           />
           <path
             d={arcPathBase}
             stroke={baseColor}
-            strokeWidth={26}
+            strokeWidth={52}
             fill="none"
             strokeLinecap="round"
           />
@@ -464,10 +472,10 @@ function ApparentPowerGauge({
             x2={pointerTip.x}
             y2={pointerTip.y}
             stroke={pointerColor}
-            strokeWidth={4}
+            strokeWidth={8}
             strokeLinecap="round"
           />
-          <circle cx={cx} cy={cy} r={5} fill={pointerColor} />
+          <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
         </svg>
 
         {titleInside && (
@@ -634,9 +642,9 @@ export function ManagementPage() {
                 Motores
               </h2>
               <span
-                className={`text-[11px] sm:text-xs uppercase tracking-wide ${subtleTextClass}`}
+                className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass}`}
               >
-                Total
+                Geral
               </span>
             </header>
 
@@ -732,8 +740,7 @@ export function ManagementPage() {
             <p
               className={`mt-2 text-[11px] sm:text-xs xl:text-sm leading-snug ${subtleTextClass}`}
             >
-              Consumo acumulado individual por CCM desde o último reset. Podemos
-              adicionar um total geral aqui embaixo se desejar.
+              Consumo acumulado individual por CCM desde o último reset. 
             </p>
           </section>
 
