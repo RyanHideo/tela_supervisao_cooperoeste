@@ -63,7 +63,7 @@ const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
           <img
             src={logo}
             alt="Sinapse Soluções e Automação"
-            className="h-20 w-auto sm:h-28"
+            className="h-20 w-auto sm:h-20"
           />
           <div className="hidden sm:block">
             <h1 className="text-2xl font-semibold tracking-tight">

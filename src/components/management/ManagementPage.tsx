@@ -404,7 +404,7 @@ function PowerFactorGauge({
 
       <div className="flex flex-col items-center -mt-1">
         <div
-          className={`px-5 py-2 rounded-full text-lg sm:text-xl font-semibold shadow-md ${valueBg}`}
+          className={`px-4 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg}`}
         >
           {display}
         </div>
@@ -587,7 +587,7 @@ function ApparentPowerGauge({
                 </div>
               )}
               <div
-                className={`px-4 py-2 rounded-full text-lg sm:text-xl font-semibold shadow-md ${valueBg} mt-1`}
+                className={`px-4 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg} mt-1`}
               >
                 {displayValue} kVA
               </div>
@@ -607,7 +607,7 @@ function ApparentPowerGauge({
       {!titleInside && (
         <div className="flex flex-col items-center -mt-1">
           <div
-            className={`px-5 py-2 rounded-full text-lg sm:text-xl font-semibold shadow-md ${valueBg}`}
+            className={`px-4 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg}`}
           >
             {displayValue} kVA
           </div>
@@ -717,7 +717,7 @@ export function ManagementPage() {
               </span>
             </header>
             <div className="flex-1 flex items-center justify-center">
-              <EfficiencyDonut value={mockEfficiency} isDark={isDark} />
+              <EfficiencyDonut value={100 - mockEfficiency} isDark={isDark} />
             </div>
           </section>
 
@@ -875,7 +875,7 @@ export function ManagementPage() {
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="w-full flex flex-col items-center">
                 <span
-                  className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
+                  className={`text-[8px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
                 >
                   CCM 1 · Trafo 1000 kVA
                 </span>
@@ -887,7 +887,7 @@ export function ManagementPage() {
               </div>
               <div className="w-full flex flex-col items-center">
                 <span
-                  className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
+                  className={`text-[8px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
                 >
                   CCM 2 · Trafo 1200 kVA
                 </span>
