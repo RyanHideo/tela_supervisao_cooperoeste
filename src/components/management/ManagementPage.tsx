@@ -12,7 +12,6 @@ type EfficiencyDonutProps = {
 
 function EfficiencyDonut({ value, isDark }: EfficiencyDonutProps) {
   const clamped = Math.max(0, Math.min(100, value));
-  // Para não “estourar” o círculo quando for 100%, desenhamos até ~99.5%
   const visual = Math.min(clamped, 99.5);
   const fillColor = isDark ? "#22c55e" : "#16a34a";
   const trackColor = isDark ? "#1e293b" : "#e5e7eb";
@@ -39,7 +38,7 @@ function EfficiencyDonut({ value, isDark }: EfficiencyDonutProps) {
           <span
             className={`text-[11px] sm:text-xs tracking-[0.18em] uppercase ${labelColor}`}
           >
-            
+            {/* Label opcional */}
           </span>
           <span className="text-3xl sm:text-4xl xl:text-5xl font-semibold">
             {clamped.toFixed(0)}%
@@ -66,9 +65,8 @@ type ElevatorsChartProps = {
 function ElevatorsChart({ values, isDark }: ElevatorsChartProps) {
   const accent = isDark ? "#38bdf8" : "#0284c7";
 
-  // >>> cores apenas de texto, mudando com o tema
-  const valueColor = isDark ? "text-slate-100" : "text-slate-700"; // 80%, 55%...
-  const labelColor = isDark ? "text-slate-200" : "text-slate-500"; // E1, E2...
+  const valueColor = isDark ? "text-slate-100" : "text-slate-700";
+  const labelColor = isDark ? "text-slate-200" : "text-slate-500";
   const footerColor = isDark ? "text-slate-200" : "text-slate-700";
 
   return (
@@ -160,7 +158,6 @@ function MotorsDonut({ active, alarm, off, isDark }: MotorsDonutProps) {
 
   return (
     <div className="flex flex-row items-center justify-center gap-6 xl:gap-10">
-      {/* Donut maior */}
       <div
         className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 xl:w-44 xl:h-44 rounded-full"
         style={{ backgroundImage: bg }}
@@ -178,7 +175,6 @@ function MotorsDonut({ active, alarm, off, isDark }: MotorsDonutProps) {
         </div>
       </div>
 
-      {/* Legenda ao lado, com números e % */}
       <div
         className={`flex flex-col gap-2 text-xs sm:text-sm md:text-base ${legendColor}`}
       >
@@ -259,7 +255,7 @@ function useArcHelpers() {
   return { polarToCartesian, describeArc };
 }
 
-/** Gauge FP (0.7–1.05) – maior */
+/** Gauge FP (0.7–1.05) – com texto estilo LOW / NORMAL / HIGH */
 
 type PowerFactorGaugeProps = {
   value: number;
@@ -270,8 +266,8 @@ type PowerFactorGaugeProps = {
 
 function PowerFactorGauge({
   value,
-  min = 0.7,
-  max = 1.05,
+  min = -1.05,
+  max = 1,
   isDark,
 }: PowerFactorGaugeProps) {
   const gradId = React.useId();
@@ -286,25 +282,35 @@ function PowerFactorGauge({
   const baseColor = isDark ? "#020617" : "#f9fafb";
   const pointerColor = isDark ? "#f9fafb" : "#111827";
   const valueBg = isDark
-    ? "bg-slate-100 text-slate-900"
+    ? "bg-slate-200 text-slate-900"
     : "bg-slate-900 text-slate-50";
   const labelColor = isDark ? "text-slate-300" : "text-slate-700";
 
   const cx = 200;
   const cy = 200;
   const rOuter = 160;
-  const rBase = 110;
-  const pointerLen = 140;
+  const rBase = 120;
+  const pointerLen = rBase * 0.9;
 
   const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
   const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
+  // Posições dos textos no estilo LOW / NORMAL / HIGH
+  const labelRadius = rOuter + 24;
+  const leftAngle = -65;
+  const centerAngle = 0;
+  const rightAngle = 65;
+
+  const leftPos = polarToCartesian(cx, cy, labelRadius, leftAngle);
+  const centerPos = polarToCartesian(cx, cy, labelRadius, centerAngle);
+  const rightPos = polarToCartesian(cx, cy, labelRadius, rightAngle);
+
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2 px-4">
       <svg
-        viewBox="0 0 400 260"
-        className="w-36 h-auto sm:w-44 xl:w-52"
+        viewBox="0 0 400 280"
+        className="w-40 h-auto sm:w-48 xl:w-56"
         shapeRendering="geometricPrecision"
       >
         <defs>
@@ -316,12 +322,15 @@ function PowerFactorGauge({
             y2="200"
             gradientUnits="userSpaceOnUse"
           >
-            <stop offset="0%" stopColor="#ef4444" />  {/* Vermelho à esquerda */}
-            <stop offset="66%" stopColor="#22c55e" />  {/* Verde no centro/ideal */}
-            <stop offset="99%" stopColor="#f97316" />  {/* Laranja até o final */}
+            <stop offset="5%" stopColor="#ef4444" />
+            <stop offset="25%" stopColor="#f97316" />
+            <stop offset="50%" stopColor="#22c55e" />
+            <stop offset="75%" stopColor="#f97316" />
+            <stop offset="95%" stopColor="#ef4444" />
           </linearGradient>
         </defs>
 
+        {/* Arco de fundo + gradiente */}
         <path
           d={arcPathOuter}
           stroke={outerTrackColor}
@@ -344,6 +353,7 @@ function PowerFactorGauge({
           strokeLinecap="round"
         />
 
+        {/* Ponteiro */}
         <line
           x1={cx}
           y1={cy}
@@ -354,16 +364,52 @@ function PowerFactorGauge({
           strokeLinecap="round"
         />
         <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
+
+        {/* Textos estilo LOW / NORMAL / HIGH */}
+        <text
+          x={leftPos.x}
+          y={leftPos.y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={14}
+          className="font-semibold fill-rose-500"
+          transform={`rotate(${leftAngle + 0}, ${leftPos.x -5}, ${leftPos.y +5})`}
+        >
+          CRÍTICO
+        </text>
+
+        <text
+          x={centerPos.x}
+          y={centerPos.y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={15}
+          className="font-semibold fill-emerald-500"
+        >
+          IDEAL
+        </text>
+
+        <text
+          x={rightPos.x}
+          y={rightPos.y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={14}
+          className="font-semibold fill-rose-500"
+          transform={`rotate(${rightAngle - 0}, ${rightPos.x +5}, ${rightPos.y+5})`}
+        >
+          CRÍTICO
+        </text>
       </svg>
 
-      <div className="flex flex-col items-center -mt-2">
+      <div className="flex flex-col items-center -mt-1">
         <div
-          className={`px-4 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg}`}
+          className={`px-5 py-2 rounded-full text-lg sm:text-xl font-semibold shadow-md ${valueBg}`}
         >
           {display}
         </div>
         <span
-          className={`mt-1 text-[11px] uppercase tracking-wide ${labelColor}`}
+          className={`mt-2 text-xs sm:text-sm uppercase tracking-wide ${labelColor}`}
         >
           FP
         </span>
@@ -372,7 +418,7 @@ function PowerFactorGauge({
   );
 }
 
-/** Gauge Potência Aparente (0–max kVA) */
+/** Gauge Potência Aparente (0–max kVA) – com texto estilo LOW / NORMAL / HIGH */
 
 type ApparentPowerGaugeProps = {
   value: number;
@@ -413,19 +459,29 @@ function ApparentPowerGauge({
   const cx = 200;
   const cy = 200;
   const rOuter = 160;
-  const rBase = 110;
-  const pointerLen = 140;
+  const rBase = 120;
+  const pointerLen = rBase * 0.9;
 
   const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
   const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
+  // Posições dos textos estilo LOW / NORMAL / HIGH
+  const labelRadius = rOuter + 24;
+  const leftAngle = -65;
+  const centerAngle = 0;
+  const rightAngle = 65;
+
+  const leftPos = polarToCartesian(cx, cy, labelRadius, leftAngle);
+  const centerPos = polarToCartesian(cx, cy, labelRadius, centerAngle);
+  const rightPos = polarToCartesian(cx, cy, labelRadius, rightAngle);
+
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-center gap-3 px-4">
       <div className="relative">
         <svg
-          viewBox="0 0 400 260"
-          className="w-36 h-auto sm:w-44 xl:w-52"
+          viewBox="0 0 400 280"
+          className="w-40 h-auto sm:w-48 xl:w-56"
           shapeRendering="geometricPrecision"
         >
           <defs>
@@ -466,6 +522,7 @@ function ApparentPowerGauge({
             strokeLinecap="round"
           />
 
+          {/* Ponteiro */}
           <line
             x1={cx}
             y1={cy}
@@ -476,6 +533,44 @@ function ApparentPowerGauge({
             strokeLinecap="round"
           />
           <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
+
+          {/* Textos estilo LOW / NORMAL / HIGH */}
+          <text
+            x={leftPos.x}
+            y={leftPos.y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={14}
+            className="font-semibold fill-emerald-500"
+            transform={`rotate(${leftAngle + 0}, ${leftPos.x -5}, ${leftPos.y +5})`}
+          >
+            IDEAL
+          </text>
+
+          <text
+            x={centerPos.x}
+            y={centerPos.y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={15}
+            className="font-semibold fill-amber-500"
+          >
+            ATENÇÃO
+          </text>
+
+          <text
+            x={rightPos.x}
+            y={rightPos.y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={14}
+            className="font-semibold fill-rose-500"
+            transform={`rotate(${rightAngle - 0}, ${rightPos.x +5}, ${rightPos.y +5})`}
+          >
+            CRÍTICO
+          </text>
+
+          <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
         </svg>
 
         {titleInside && (
@@ -485,18 +580,22 @@ function ApparentPowerGauge({
           >
             <div className="text-center">
               {title && (
-                <div className={`text-[10px] sm:text-xs uppercase tracking-wide ${labelColor}`}>
+                <div
+                  className={`text-[11px] sm:text-sm uppercase tracking-wide ${labelColor}`}
+                >
                   {title}
                 </div>
               )}
-              <div className={`px-3 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg} mt-1`}>
+              <div
+                className={`px-4 py-2 rounded-full text-lg sm:text-xl font-semibold shadow-md ${valueBg} mt-1`}
+              >
                 {displayValue} kVA
               </div>
-              <div className={`mt-1 text-[11px] sm:text-xs ${labelColor}`}>
+              <div className={`mt-1 text-xs sm:text-sm ${labelColor}`}>
                 {pct}% da capacidade
               </div>
               {subtitle && (
-                <div className={`text-[11px] sm:text-xs mt-1 ${labelColor}`}>
+                <div className={`text-xs sm:text-sm mt-1 ${labelColor}`}>
                   {subtitle}
                 </div>
               )}
@@ -508,11 +607,11 @@ function ApparentPowerGauge({
       {!titleInside && (
         <div className="flex flex-col items-center -mt-1">
           <div
-            className={`px-4 py-1.5 rounded-full text-sm sm:text-base font-semibold shadow-md ${valueBg}`}
+            className={`px-5 py-2 rounded-full text-lg sm:text-xl font-semibold shadow-md ${valueBg}`}
           >
             {displayValue} kVA
           </div>
-          <span className={`mt-1 text-[11px] sm:text-xs ${labelColor}`}>
+          <span className={`mt-2 text-xs sm:text-sm ${labelColor}`}>
             {pct}% da capacidade
           </span>
         </div>
@@ -558,7 +657,6 @@ export function ManagementPage() {
 
   const subtleTextClass = isDark ? "text-slate-400" : "text-slate-700";
 
-  // MOCKS temporários (depois ligamos nas tags reais)
   const mockEfficiency = 72;
   const mockElevators = [80, 55, 63, 40, 95, 70, 35, 20, 50, 60, 45, 30];
   const mockMotors = { active: 14, alarm: 2, off: 4 };
@@ -580,8 +678,8 @@ export function ManagementPage() {
   return (
     <div className={rootClass}>
       <div className="mx-auto w-full max-w-[1920px]">
-        <div className="grid gap-3 lg:gap-4 xl:grid-cols-5">
-          {/* Eficiência */}
+        <div className="grid grid-cols-1 gap-3 lg:gap-4 xl:grid-cols-6">
+          {/* Eficiência Produtiva */}
           <section
             className={`${cardBase} ${
               isDark ? cardDark : cardLight
@@ -589,7 +687,7 @@ export function ManagementPage() {
           >
             <header className="flex items-center justify-between mb-1">
               <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight">
-                Eficiência
+                Eficiência Produtiva
               </h2>
               <span
                 className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass}`}
@@ -602,32 +700,24 @@ export function ManagementPage() {
             </div>
           </section>
 
-          {/* Temperaturas */}
-          <section className="flex flex-col gap-12 xl:col-span-1">
-            <div className={`${cardBase} ${isDark ? cardDark : cardLight}`}>
-              <header className="flex items-center justify-between mb-1">
-                <h2 className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight">
-                  Temperatura painel (CCM 1)
-                </h2>
-              </header>
-              <div className="flex-1 flex items-center justify-between">
-                <span className="text-2xl xl:text-3xl font-semibold">
-                  --.- °C
-                </span>
-              </div>
-            </div>
-
-            <div className={`${cardBase} ${isDark ? cardDark : cardLight}`}>
-              <header className="flex items-center justify-between mb-1">
-                <h2 className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight">
-                  Temperatura painel (CCM 2)
-                </h2>
-              </header>
-              <div className="flex-1 flex items-center justify-between">
-                <span className="text-2xl xl:text-3xl font-semibold">
-                  --.- °C
-                </span>
-              </div>
+          {/* Eficiência Energética */}
+          <section
+            className={`${cardBase} ${
+              isDark ? cardDark : cardLight
+            } xl:col-span-2 min-h-[165px]`}
+          >
+            <header className="flex items-center justify-between mb-1">
+              <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight">
+                Eficiência Energética
+              </h2>
+              <span
+                className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass}`}
+              >
+                Geral
+              </span>
+            </header>
+            <div className="flex-1 flex items-center justify-center">
+              <EfficiencyDonut value={mockEfficiency} isDark={isDark} />
             </div>
           </section>
 
@@ -668,13 +758,42 @@ export function ManagementPage() {
               <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight">
                 Percentual de carga dos elevadores (1–12)
               </h2>
-            <span
+              <span
                 className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass}`}
               >
                 Tempo real
               </span>
             </header>
             <ElevatorsChart values={mockElevators} isDark={isDark} />
+          </section>
+
+          {/* Temperaturas */}
+          <section className="flex flex-col gap-3 xl:col-span-1">
+            <div className={`${cardBase} ${isDark ? cardDark : cardLight} flex-1`}>
+              <header className="flex items-center justify-between mb-1">
+                <h2 className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight">
+                  Temperatura (CCM 1)
+                </h2>
+              </header>
+              <div className="flex-1 flex items-center justify-between">
+                <span className="text-2xl xl:text-3xl font-semibold">
+                  --.- °C
+                </span>
+              </div>
+            </div>
+
+            <div className={`${cardBase} ${isDark ? cardDark : cardLight} flex-1`}>
+              <header className="flex items-center justify-between mb-1">
+                <h2 className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight">
+                  Temperatura (CCM 2)
+                </h2>
+              </header>
+              <div className="flex-1 flex items-center justify-between">
+                <span className="text-2xl xl:text-3xl font-semibold">
+                  --.- °C
+                </span>
+              </div>
+            </div>
           </section>
 
           {/* Alarmes */}
@@ -740,7 +859,7 @@ export function ManagementPage() {
             <p
               className={`mt-2 text-[11px] sm:text-xs xl:text-sm leading-snug ${subtleTextClass}`}
             >
-              Consumo acumulado individual por CCM desde o último reset. 
+              Consumo acumulado individual por CCM desde o último reset.
             </p>
           </section>
 
@@ -791,12 +910,12 @@ export function ManagementPage() {
           <section
             className={`${cardBase} ${
               isDark ? cardDark : cardLight
-            } xl:col-span-2`}
+            } xl:col-span-3`}
           >
             <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight text-center mb-2">
               Fator de potência
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 place-items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col items-center">
                 <span
                   className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
