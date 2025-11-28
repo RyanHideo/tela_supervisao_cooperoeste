@@ -191,9 +191,7 @@ export function Dashboard({ config }: Props) {
         {/* Barra de status do CLP + modo de operação */}
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-            <span
-              className={`h-2 w-2 rounded-full ${connectionStatus.dot}`}
-            />
+            <span className={`h-2 w-2 rounded-full ${connectionStatus.dot}`} />
             <span className={connectionStatus.color}>
               {connectionStatus.label}
             </span>
@@ -217,73 +215,87 @@ export function Dashboard({ config }: Props) {
             <header className="flex flex-wrap items-center justify-between gap-2">
               <h2 className={cardTitleClass}>Alarmes</h2>
               <div className="flex items-center gap-2 text-xs">
-                <span
-                  className={`h-2 w-2 rounded-full ${alarmDotClass}`}
-                />
+                <span className={`h-2 w-2 rounded-full ${alarmDotClass}`} />
                 <span className={alarmHeaderTextClass}>
                   {alarmSummaryLabel}
                 </span>
               </div>
             </header>
 
-            <div className={alarmCardClass}>
+            <div className={`${alarmCardClass} relative`}>
               {hasAlarms ? (
-                <div className="space-y-2 text-sm">
-                  {alarms.map((alarm) => {
-                    const base =
-                      "flex items-start gap-2 rounded-xl border px-3 py-2 text-xs sm:text-sm";
-                    const styleBySeverity = (() => {
-                      switch (alarm.severity) {
-                        case "EMERGENCY":
-                          return isDark
-                            ? "border-rose-500/40 bg-rose-950/70 text-rose-100"
-                            : "border-rose-200 bg-rose-50 text-rose-900";
-                        case "HIGH":
-                          return isDark
-                            ? "border-amber-500/40 bg-amber-950/40 text-amber-100"
-                            : "border-amber-200 bg-amber-50 text-amber-900";
-                        case "MEDIUM":
-                          return isDark
-                            ? "border-sky-500/40 bg-sky-950/40 text-sky-100"
-                            : "border-sky-200 bg-sky-50 text-sky-900";
-                        default:
-                          return "";
-                      }
-                    })();
-                    const dotColor = (() => {
-                      switch (alarm.severity) {
-                        case "EMERGENCY":
-                          return isDark ? "bg-rose-400" : "bg-rose-500";
-                        case "HIGH":
-                          return isDark ? "bg-amber-400" : "bg-amber-500";
-                        case "MEDIUM":
-                        default:
-                          return isDark ? "bg-sky-400" : "bg-sky-500";
-                      }
-                    })();
+                <>
+                  <div className="space-y-2 text-sm max-h-40 overflow-y-auto pr-1">
+                    {alarms.map((alarm) => {
+                      const base =
+                        "flex items-start gap-2 rounded-xl border px-3 py-2 text-xs sm:text-sm";
 
-                    return (
-                      <div
-                        key={alarm.id}
-                        className={`${base} ${styleBySeverity}`}
-                      >
-                        <span
-                          className={`mt-1 h-2 w-2 rounded-full ${dotColor}`}
-                        />
-                        <div className="flex-1">
-                          <div className="font-semibold">
-                            {alarm.label}
+                      const styleBySeverity = (() => {
+                        switch (alarm.severity) {
+                          case "EMERGENCY":
+                            return isDark
+                              ? "border-rose-500/40 bg-rose-950/70 text-rose-100"
+                              : "border-rose-200 bg-rose-50 text-rose-900";
+                          case "HIGH":
+                            return isDark
+                              ? "border-amber-500/40 bg-amber-950/40 text-amber-100"
+                              : "border-amber-200 bg-amber-50 text-amber-900";
+                          case "MEDIUM":
+                            return isDark
+                              ? "border-sky-500/40 bg-sky-950/40 text-sky-100"
+                              : "border-sky-200 bg-sky-50 text-sky-900";
+                          default:
+                            return "";
+                        }
+                      })();
+
+                      const dotColor = (() => {
+                        switch (alarm.severity) {
+                          case "EMERGENCY":
+                            return isDark ? "bg-rose-400" : "bg-rose-500";
+                          case "HIGH":
+                            return isDark ? "bg-amber-400" : "bg-amber-500";
+                          case "MEDIUM":
+                          default:
+                            return isDark ? "bg-sky-400" : "bg-sky-500";
+                        }
+                      })();
+
+                      return (
+                        <div
+                          key={alarm.id}
+                          className={`${base} ${styleBySeverity}`}
+                        >
+                          <span
+                            className={`mt-1 h-2 w-2 rounded-full ${dotColor}`}
+                          />
+                          <div className="flex-1">
+                            <div className="font-semibold">{alarm.label}</div>
+                            {alarm.detail && (
+                              <div className="text-[11px] opacity-80">
+                                {alarm.detail}
+                              </div>
+                            )}
                           </div>
-                          {alarm.detail && (
-                            <div className="text-[11px] opacity-80">
-                              {alarm.detail}
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Fade + dica de scroll */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 flex items-end justify-center">
+                    <div
+                      className={`w-full h-full ${
+                        isDark
+                          ? "bg-gradient-to-t from-slate-900/95 to-transparent"
+                          : "bg-gradient-to-t from-white to-transparent"
+                      }`}
+                    />
+                    <span className="absolute mb-1 text-[10px] uppercase tracking-wide text-slate-400">
+                      Role para ver mais
+                    </span>
+                  </div>
+                </>
               ) : (
                 <div
                   className={
@@ -418,13 +430,13 @@ export function Dashboard({ config }: Props) {
             </div>
 
             <div className="mt-3">
-                <TagValueCard
-                  label=""
-                  value={getNumber(`${prefix}_POTENCIA`)}
-                  unit="kVA"
-                  decimals={1}
-                  quality={m[`${prefix}_POTENCIA`]?.quality}
-                />
+              <TagValueCard
+                label=""
+                value={getNumber(`${prefix}_POTENCIA`)}
+                unit="kVA"
+                decimals={1}
+                quality={m[`${prefix}_POTENCIA`]?.quality}
+              />
             </div>
           </div>
 
@@ -441,13 +453,13 @@ export function Dashboard({ config }: Props) {
             </div>
 
             <div className="mt-3">
-                <TagValueCard
-                  label=""
-                  value={getNumber(`${prefix}_FATOR_POTENCIA`)}
-                  unit="cos φ"
-                  decimals={2}
-                  quality={m[`${prefix}_FATOR_POTENCIA`]?.quality}
-                />
+              <TagValueCard
+                label=""
+                value={getNumber(`${prefix}_FATOR_POTENCIA`)}
+                unit="cos φ"
+                decimals={2}
+                quality={m[`${prefix}_FATOR_POTENCIA`]?.quality}
+              />
             </div>
           </div>
 
@@ -464,13 +476,13 @@ export function Dashboard({ config }: Props) {
             </div>
 
             <div className="mt-3">
-                <TagValueCard
-                  label=""
-                  value={getNumber(`${prefix}_FREQUENCIA`)}
-                  unit="Hz"
-                  decimals={1}
-                  quality={m[`${prefix}_FREQUENCIA`]?.quality}
-                />
+              <TagValueCard
+                label=""
+                value={getNumber(`${prefix}_FREQUENCIA`)}
+                unit="Hz"
+                decimals={1}
+                quality={m[`${prefix}_FREQUENCIA`]?.quality}
+              />
             </div>
           </div>
         </section>
@@ -490,22 +502,20 @@ export function Dashboard({ config }: Props) {
             </div>
 
             <div className="mt-3">
-                <TagValueCard
-                  label=""
-                  value={getNumber(`${prefix}_CONSUMO_TOTAL`)}
-                  unit="kWh"
-                  decimals={0}
-                  quality={m[`${prefix}_CONSUMO_TOTAL`]?.quality}
-                />
+              <TagValueCard
+                label=""
+                value={getNumber(`${prefix}_CONSUMO_TOTAL`)}
+                unit="kWh"
+                decimals={0}
+                quality={m[`${prefix}_CONSUMO_TOTAL`]?.quality}
+              />
             </div>
           </div>
 
           {/* Temperatura painel */}
           <div className={cardBaseClass}>
             <div className="flex items-center justify-between">
-              <h3 className={cardTitleClass}>
-                Temperatura Painel (CCM)
-              </h3>
+              <h3 className={cardTitleClass}>Temperatura Painel (CCM)</h3>
               <div className="flex items-center gap-1 text-[11px]">
                 <span className="h-2 w-2 rounded-full bg-slate-500" />
                 <span className="text-slate-400">
@@ -515,13 +525,13 @@ export function Dashboard({ config }: Props) {
             </div>
 
             <div className="mt-3">
-                <TagValueCard
-                  label=""
-                  value={getNumber(`${prefix}_TEMP_PAINEL`)}
-                  unit="°C"
-                  decimals={1}
-                  quality={m[`${prefix}_TEMP_PAINEL`]?.quality}
-                />
+              <TagValueCard
+                label=""
+                value={getNumber(`${prefix}_TEMP_PAINEL`)}
+                unit="°C"
+                decimals={1}
+                quality={m[`${prefix}_TEMP_PAINEL`]?.quality}
+              />
             </div>
           </div>
         </section>

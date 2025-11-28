@@ -1,6 +1,7 @@
 // src/components/management/ManagementPage.tsx
 import React from "react";
 import { useTheme } from "../../theme/ThemeContext";
+import { useEfficiency } from "../../hooks/useEfficiency";
 
 /** ==================== COMPONENTES VISUAIS ==================== */
 /** Donut de eficiência: 0–100% */
@@ -8,9 +9,14 @@ import { useTheme } from "../../theme/ThemeContext";
 type EfficiencyDonutProps = {
   value: number; // 0–100
   isDark: boolean;
+  description: string;
 };
 
-function EfficiencyDonut({ value, isDark }: EfficiencyDonutProps) {
+function EfficiencyDonut({
+  value,
+  isDark,
+  description,
+}: EfficiencyDonutProps) {
   const clamped = Math.max(0, Math.min(100, value));
   const visual = Math.min(clamped, 99.5);
   const fillColor = isDark ? "#22c55e" : "#16a34a";
@@ -49,7 +55,7 @@ function EfficiencyDonut({ value, isDark }: EfficiencyDonutProps) {
       <span
         className={`max-w-[220px] text-[11px] sm:text-xs text-left ${descColor}`}
       >
-        Indicador global de eficiência dos equipamentos.
+        {description}
       </span>
     </div>
   );
@@ -296,7 +302,6 @@ function PowerFactorGauge({
   const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
-  // Posições dos textos no estilo LOW / NORMAL / HIGH
   const labelRadius = rOuter + 24;
   const leftAngle = -65;
   const centerAngle = 0;
@@ -322,15 +327,14 @@ function PowerFactorGauge({
             y2="200"
             gradientUnits="userSpaceOnUse"
           >
-            <stop offset="5%" stopColor="#ef4444" />
-            <stop offset="25%" stopColor="#f97316" />
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="30%" stopColor="#f97316" />
             <stop offset="50%" stopColor="#22c55e" />
-            <stop offset="75%" stopColor="#f97316" />
-            <stop offset="95%" stopColor="#ef4444" />
+            <stop offset="70%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#ef4444" />
           </linearGradient>
         </defs>
 
-        {/* Arco de fundo + gradiente */}
         <path
           d={arcPathOuter}
           stroke={outerTrackColor}
@@ -353,7 +357,6 @@ function PowerFactorGauge({
           strokeLinecap="round"
         />
 
-        {/* Ponteiro */}
         <line
           x1={cx}
           y1={cy}
@@ -365,7 +368,6 @@ function PowerFactorGauge({
         />
         <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
 
-        {/* Textos estilo LOW / NORMAL / HIGH */}
         <text
           x={leftPos.x}
           y={leftPos.y}
@@ -373,7 +375,9 @@ function PowerFactorGauge({
           dominantBaseline="central"
           fontSize={14}
           className="font-semibold fill-rose-500"
-          transform={`rotate(${leftAngle + 0}, ${leftPos.x -5}, ${leftPos.y +5})`}
+          transform={`rotate(${leftAngle + 0}, ${leftPos.x - 5}, ${
+            leftPos.y + 5
+          })`}
         >
           CRÍTICO
         </text>
@@ -396,7 +400,9 @@ function PowerFactorGauge({
           dominantBaseline="central"
           fontSize={14}
           className="font-semibold fill-rose-500"
-          transform={`rotate(${rightAngle - 0}, ${rightPos.x +5}, ${rightPos.y+5})`}
+          transform={`rotate(${rightAngle - 0}, ${rightPos.x + 5}, ${
+            rightPos.y + 5
+          })`}
         >
           CRÍTICO
         </text>
@@ -418,7 +424,7 @@ function PowerFactorGauge({
   );
 }
 
-/** Gauge Potência Aparente (0–max kVA) – com texto estilo LOW / NORMAL / HIGH */
+/** Gauge Potência Aparente (0–max kVA) */
 
 type ApparentPowerGaugeProps = {
   value: number;
@@ -466,7 +472,6 @@ function ApparentPowerGauge({
   const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
-  // Posições dos textos estilo LOW / NORMAL / HIGH
   const labelRadius = rOuter + 24;
   const leftAngle = -65;
   const centerAngle = 0;
@@ -522,7 +527,6 @@ function ApparentPowerGauge({
             strokeLinecap="round"
           />
 
-          {/* Ponteiro */}
           <line
             x1={cx}
             y1={cy}
@@ -534,7 +538,6 @@ function ApparentPowerGauge({
           />
           <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
 
-          {/* Textos estilo LOW / NORMAL / HIGH */}
           <text
             x={leftPos.x}
             y={leftPos.y}
@@ -542,7 +545,9 @@ function ApparentPowerGauge({
             dominantBaseline="central"
             fontSize={14}
             className="font-semibold fill-emerald-500"
-            transform={`rotate(${leftAngle + 0}, ${leftPos.x -5}, ${leftPos.y +5})`}
+            transform={`rotate(${leftAngle + 0}, ${leftPos.x - 5}, ${
+              leftPos.y + 5
+            })`}
           >
             IDEAL
           </text>
@@ -565,7 +570,9 @@ function ApparentPowerGauge({
             dominantBaseline="central"
             fontSize={14}
             className="font-semibold fill-rose-500"
-            transform={`rotate(${rightAngle - 0}, ${rightPos.x +5}, ${rightPos.y +5})`}
+            transform={`rotate(${rightAngle - 0}, ${rightPos.x + 5}, ${
+              rightPos.y + 5
+            })`}
           >
             CRÍTICO
           </text>
@@ -620,6 +627,80 @@ function ApparentPowerGauge({
   );
 }
 
+/** Card de Temperatura com cor dinâmica */
+
+type TemperatureCardProps = {
+  label: string;
+  value: number | null;
+  isDark: boolean;
+};
+
+function getTemperatureClasses(temp: number | null, isDark: boolean) {
+  const cardBase =
+    "rounded-2xl border shadow-sm px-4 py-3 sm:px-5 sm:py-3 xl:px-6 xl:py-3 flex flex-col flex-1";
+
+  if (temp === null) {
+    return `${cardBase} ${
+      isDark ? "bg-slate-900/70 border-slate-800" : "bg-white border-slate-200"
+    }`;
+  }
+
+  if (temp > 50) {
+    return `${cardBase}  ${
+      isDark ? "bg-rose-800 border-rose-600" : "bg-rose-600 border-rose-500"
+    }`;
+  }
+  if (temp > 40) {
+    return `${cardBase} ${
+      isDark
+        ? "bg-rose-900/50 border-rose-700"
+        : "bg-rose-100 border-rose-300"
+    }`;
+  }
+  if (temp > 35) {
+    return `${cardBase} ${
+      isDark
+        ? "bg-amber-900/50 border-amber-700"
+        : "bg-amber-100 border-amber-300"
+    }`;
+  }
+
+  return `${cardBase} ${
+    isDark ? "bg-slate-900/70 border-slate-800" : "bg-white border-slate-200"
+  }`;
+}
+
+function TemperatureCard({ label, value, isDark }: TemperatureCardProps) {
+  const cardClasses = getTemperatureClasses(value, isDark);
+  const textColor =
+    value === null
+      ? ""
+      : value > 50
+      ? isDark
+        ? "text-white"
+        : "text-white"
+      : value > 40
+      ? isDark
+        ? "text-amber-300"
+        : "text-amber-700"
+      : "";
+
+  return (
+    <div className={cardClasses}>
+      <header className="flex items-center justify-between mb-1">
+        <h2 className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight">
+          {label}
+        </h2>
+      </header>
+      <div className="flex-1 flex items-center justify-start">
+        <span className={`text-2xl xl:text-3xl font-semibold ${textColor}`}>
+          {value !== null ? `${value.toFixed(1)} °C` : "--.- °C"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /** ==================== PAGE PRINCIPAL ==================== */
 
 export function ManagementPage() {
@@ -657,15 +738,40 @@ export function ManagementPage() {
 
   const subtleTextClass = isDark ? "text-slate-400" : "text-slate-700";
 
-  const mockEfficiency = 72;
+  // ====== NOVO: busca eficiências do back-end ======
+  const { productive, energy } = useEfficiency({ intervalMs: 5000 });
+
+  // Converte overallEfficiency (0–1) para 0–100%.
+  const productiveEfficiency = (() => {
+    const val = productive?.overallEfficiency;
+    if (typeof val === "number" && !Number.isNaN(val)) {
+      return Math.max(0, Math.min(100, val * 100));
+    }
+    // fallback se o back não responder
+    return 72;
+  })();
+
+  const energyEfficiency = (() => {
+    const val = energy?.overallEfficiency;
+    if (typeof val === "number" && !Number.isNaN(val)) {
+      return Math.max(0, Math.min(100, val * 100));
+    }
+    // fallback: complementar da produtiva, só para não quebrar
+    return 100 - productiveEfficiency;
+  })();
+
+  // ====== MOCKS QUE AINDA NÃO FORAM SUBSTITUÍDOS POR TAGS ======
   const mockElevators = [80, 55, 63, 40, 95, 70, 35, 20, 50, 60, 45, 30];
-  const mockMotors = { active: 14, alarm: 2, off: 4 };
+  const mockMotors = { active: 10, alarm: 10, off: 30 };
 
   const mockFp1 = 0.93;
   const mockFp2 = 0.88;
 
   const mockApparent1 = 650;
   const mockApparent2 = 820;
+
+  const mockTemp1 = 47.1;
+  const mockTemp2 = 52.3;
 
   const timeClass = isDark
     ? "font-mono text-xl sm:text-2xl xl:text-3xl text-slate-50"
@@ -695,8 +801,12 @@ export function ManagementPage() {
                 Geral
               </span>
             </header>
-            <div className="flex-1 flex items-center justify-center">
-              <EfficiencyDonut value={mockEfficiency} isDark={isDark} />
+            <div className="flex-1 flex items-center justify-center ">
+              <EfficiencyDonut
+                value={productiveEfficiency}
+                isDark={isDark}
+                description="Indicador geral de eficiência dos elevadores e redlers."
+              />
             </div>
           </section>
 
@@ -717,7 +827,11 @@ export function ManagementPage() {
               </span>
             </header>
             <div className="flex-1 flex items-center justify-center">
-              <EfficiencyDonut value={100 - mockEfficiency} isDark={isDark} />
+              <EfficiencyDonut
+                value={energyEfficiency}
+                isDark={isDark}
+                description="Indicador geral de eficiência de todos os motores."
+              />
             </div>
           </section>
 
@@ -769,46 +883,72 @@ export function ManagementPage() {
 
           {/* Temperaturas */}
           <section className="flex flex-col gap-3 xl:col-span-1">
-            <div className={`${cardBase} ${isDark ? cardDark : cardLight} flex-1`}>
-              <header className="flex items-center justify-between mb-1">
-                <h2 className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight">
-                  Temperatura (CCM 1)
-                </h2>
-              </header>
-              <div className="flex-1 flex items-center justify-between">
-                <span className="text-2xl xl:text-3xl font-semibold">
-                  --.- °C
-                </span>
-              </div>
-            </div>
-
-            <div className={`${cardBase} ${isDark ? cardDark : cardLight} flex-1`}>
-              <header className="flex items-center justify-between mb-1">
-                <h2 className="text-sm sm:text-base xl:text-lg font-semibold tracking-tight">
-                  Temperatura (CCM 2)
-                </h2>
-              </header>
-              <div className="flex-1 flex items-center justify-between">
-                <span className="text-2xl xl:text-3xl font-semibold">
-                  --.- °C
-                </span>
-              </div>
-            </div>
+            <TemperatureCard
+              label="Temperatura (CCM 1)"
+              value={mockTemp1}
+              isDark={isDark}
+            />
+            <TemperatureCard
+              label="Temperatura (CCM 2)"
+              value={mockTemp2}
+              isDark={isDark}
+            />
           </section>
 
           {/* Alarmes */}
-          <section className={`${cardBase} ${isDark ? cardDark : cardLight}`}>
+          <section
+            className={`${cardBase} ${
+              isDark ? cardDark : cardLight
+            } min-h-[190px]`}
+          >
             <header className="flex items-center justify-between mb-1">
               <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight">
                 Alarmes
               </h2>
             </header>
-            <div className="flex-1 flex items-center justify-center">
-              <span
-                className={`text-sm xl:text-base text-center ${subtleTextClass}`}
-              >
-                Nenhum alarme ativo. (lista geral aqui)
-              </span>
+
+            {/* Área rolável para não quebrar o layout quando tiver muitos alarmes */}
+            <div className="flex-1 min-h-0 mt-1 relative">
+              <div className="h-full max-h-40 flex flex-col gap-2 text-sm xl:text-base overflow-y-auto pr-1">
+                <div className="font-semibold text-rose-500">
+                  • Falha no motor do elevador E5
+                </div>
+                <div className="font-medium text-amber-500">
+                  • Temperatura alta no CCM 2
+                </div>
+                <div className="font-medium text-amber-500">
+                  • Temperatura alta no CCM 2
+                </div>
+                <div className="font-medium text-amber-500">
+                  • Temperatura alta no CCM 2
+                </div>
+                <div className="font-medium text-amber-500">
+                  • Temperatura alta no CCM 2
+                </div>
+                <div className="font-medium text-amber-500">
+                  • Temperatura alta no CCM 2
+                </div>
+                <div className="font-medium text-amber-500">
+                  • Temperatura alta no CCM 2
+                </div>
+                <div className="font-medium text-amber-500">
+                  • Temperatura alta no CCM 2
+                </div>
+              </div>
+
+              {/* Fade + dica de scroll */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 flex items-end justify-center">
+                <div
+                  className={`w-full h-full ${
+                    isDark
+                      ? "bg-gradient-to-t from-slate-900/95 to-transparent"
+                      : "bg-gradient-to-t from-white to-transparent"
+                  }`}
+                />
+                <span className="absolute mb-1 text-[10px] uppercase tracking-wide text-slate-400">
+                  Role para ver mais
+                </span>
+              </div>
             </div>
           </section>
 
@@ -828,7 +968,9 @@ export function ManagementPage() {
                   >
                     CCM 1
                   </span>
-                  <p className="text-3xl xl:text-4xl font-semibold">XX kWh</p>
+                  <p className="text-3xl xl:text-4xl font-semibold">
+                    12345 kWh
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -845,7 +987,9 @@ export function ManagementPage() {
                   >
                     CCM 2
                   </span>
-                  <p className="text-3xl xl:text-4xl font-semibold">XX kWh</p>
+                  <p className="text-3xl xl:text-4xl font-semibold">
+                    67890 kWh
+                  </p>
                 </div>
                 <button
                   type="button"

@@ -31,10 +31,13 @@ const API_BASE = RAW_BASE.replace(/\/+$/, "");
  * Busca as tags no back-end, para um CCM específico.
  *
  * ccm deve ser "ccm1" ou "ccm2" (mesma key do config do front).
+ *
+ * Endpoints:
+ *  - http://localhost:9090/api/modbus/ccm1/tags
+ *  - http://localhost:9090/api/modbus/ccm2/tags
  */
 export async function getTagsValues(ccm: CcmKey): Promise<NormalizedTags> {
-  const params = new URLSearchParams({ ccm });
-  const url = `${API_BASE}/api/tags?${params.toString()}`;
+  const url = `${API_BASE}/api/modbus/${ccm}/tags`;
 
   const r = await fetch(url, { cache: "no-store" });
 
