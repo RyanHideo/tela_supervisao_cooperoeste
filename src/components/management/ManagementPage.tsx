@@ -1,7 +1,45 @@
 // src/components/management/ManagementPage.tsx
 import React from "react";
 import { useTheme } from "../../theme/ThemeContext";
-import { useEfficiency } from "../../hooks/useEfficiency";
+import { useMultiCcmTags } from "../../hooks/useMultiCcmTags";
+import {
+  getElevatorsLoad,
+  getEnergyEfficiency,
+  getProductiveEfficiency,
+} from "../../api/efficiency";
+import {
+  getConsumptionResetDate,
+  postResetConsumption,
+} from "../../api/consumption";
+
+/** ==================== TIPAGENS AUXILIARES ==================== */
+
+type AlarmSeverity = "EMERGENCY" | "HIGH" | "MEDIUM";
+
+type AlarmItem = {
+  id: string;
+  label: string;
+  detail?: string;
+  severity: AlarmSeverity;
+};
+
+// resposta da API de eficiência energética
+type EnergyEfficiencyResponse = {
+  overallLoadPercentage: number; // 0–1
+  totalActiveCurrent: number;
+  totalNominalCurrentOfActives: number;
+  activeMotorsCount: number;
+  activeMotorNames: string[];
+};
+
+// resposta da API de eficiência produtiva
+type ProductiveEfficiencyResponse = {
+  overallEfficiency: number; // 0–1
+  totalActiveCurrent: number;
+  totalNominalCurrentOfActives: number;
+  activeProductiveMotorsCount: number;
+  activeMotorNames: string[];
+};
 
 /** ==================== COMPONENTES VISUAIS ==================== */
 /** Donut de eficiência: 0–100% */
@@ -133,7 +171,7 @@ function ElevatorsChart({ values, isDark }: ElevatorsChartProps) {
   );
 }
 
-/** Donut de Motores */
+/** Donut de Motores – TODOS os CCMs */
 
 type MotorsDonutProps = {
   active: number;
@@ -145,7 +183,7 @@ type MotorsDonutProps = {
 function MotorsDonut({ active, alarm, off, isDark }: MotorsDonutProps) {
   const total = Math.max(1, active + alarm + off);
 
-  const aPerc = (active / total) * 100;
+  const ligPerc = (active / total) * 100;
   const alPerc = (alarm / total) * 100;
   const offPerc = (off / total) * 100;
 
@@ -154,9 +192,9 @@ function MotorsDonut({ active, alarm, off, isDark }: MotorsDonutProps) {
   const offColor = isDark ? "#64748b" : "#94a3b8";
 
   const bg = `conic-gradient(
-    ${activeColor} 0deg ${aPerc * 3.6}deg,
-    ${alarmColor} ${aPerc * 3.6}deg ${(aPerc + alPerc) * 3.6}deg,
-    ${offColor} ${(aPerc + alPerc) * 3.6}deg 360deg
+    ${activeColor} 0deg ${ligPerc * 3.6}deg,
+    ${alarmColor} ${ligPerc * 3.6}deg ${(ligPerc + alPerc) * 3.6}deg,
+    ${offColor} ${(ligPerc + alPerc) * 3.6}deg 360deg
   )`;
 
   const donutBg = isDark ? "#020617" : "#f9fafb";
@@ -190,7 +228,7 @@ function MotorsDonut({ active, alarm, off, isDark }: MotorsDonutProps) {
             style={{ backgroundColor: activeColor }}
           />
           <span>
-            <strong>Ativos:</strong> {active} ({aPerc.toFixed(0)}%)
+            <strong>Ligados:</strong> {active} ({ligPerc.toFixed(0)}%)
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -261,7 +299,7 @@ function useArcHelpers() {
   return { polarToCartesian, describeArc };
 }
 
-/** Gauge FP (0.7–1.05) – com texto estilo LOW / NORMAL / HIGH */
+/** Gauge FP */
 
 type PowerFactorGaugeProps = {
   value: number;
@@ -424,7 +462,7 @@ function PowerFactorGauge({
   );
 }
 
-/** Gauge Potência Aparente (0–max kVA) */
+/** Gauge Potência Aparente */
 
 type ApparentPowerGaugeProps = {
   value: number;
@@ -559,6 +597,9 @@ function ApparentPowerGauge({
             dominantBaseline="central"
             fontSize={15}
             className="font-semibold fill-amber-500"
+            transform={`rotate(${centerAngle}, ${centerPos.x}, ${
+              centerPos.y
+            })`}
           >
             ATENÇÃO
           </text>
@@ -627,7 +668,7 @@ function ApparentPowerGauge({
   );
 }
 
-/** Card de Temperatura com cor dinâmica */
+/** Card de Temperatura */
 
 type TemperatureCardProps = {
   label: string;
@@ -676,9 +717,7 @@ function TemperatureCard({ label, value, isDark }: TemperatureCardProps) {
     value === null
       ? ""
       : value > 50
-      ? isDark
-        ? "text-white"
-        : "text-white"
+      ? "text-white"
       : value > 40
       ? isDark
         ? "text-amber-300"
@@ -701,6 +740,111 @@ function TemperatureCard({ label, value, isDark }: TemperatureCardProps) {
   );
 }
 
+/** ==================== FUNÇÕES AUXILIARES DE LÓGICA ==================== */
+
+// Soma motores dos DOIS CCMs (sem prefixo, CCM1_ e CCM2_)
+function computeMotorsSummary(
+  values: Record<string, number | boolean | undefined>
+) {
+  let active = 0;
+  let alarm = 0;
+  let off = 0;
+  let seenAny = false;
+
+  const prefixes = ["", "CCM1_", "CCM2_"] as const;
+
+  for (const prefix of prefixes) {
+    for (let i = 1; i <= 84; i++) {
+      const s = values[`${prefix}M${i}_S`];
+      const f = values[`${prefix}M${i}_F`];
+
+      if (s === undefined && f === undefined) {
+        continue;
+      }
+
+      seenAny = true;
+
+      const isOn = isTrue(s);
+      const hasAlarm = isTrue(f);
+
+      if (hasAlarm) {
+        alarm++;
+      } else if (isOn) {
+        active++;
+      } else {
+        off++;
+      }
+    }
+  }
+
+  if (!seenAny) return { active: 0, alarm: 0, off: 0 };
+  return { active, alarm, off };
+}
+
+function formatResetTooltip(ts: string | null | undefined) {
+  if (!ts) return "Nenhum reset registrado";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "Último reset: data inválida";
+  return `Último reset: ${d.toLocaleString("pt-BR")}`;
+}
+
+function isTrue(raw: unknown) {
+  return raw === true || raw === 1 || raw === "1";
+}
+
+function buildAlarms(
+  values: Record<string, number | boolean | undefined>
+): AlarmItem[] {
+  const prefixes = ["CCM1", "CCM2"] as const;
+  const alarms: AlarmItem[] = [];
+
+  prefixes.forEach((prefix) => {
+    const ccmLabel = prefix === "CCM1" ? "CCM 1" : "CCM 2";
+    const emergenciaAtiva = isTrue(values[`${prefix}_STATUS_EMERGENCIA`]);
+    const faltaFase = isTrue(values[`${prefix}_STATUS_FALTA_FASE`]);
+    const superAquecimento = isTrue(
+      values[`${prefix}_STATUS_SUPER_AQUECIMENTO`]
+    );
+
+    if (emergenciaAtiva) {
+      alarms.push({
+        id: `${prefix}-emergencia`,
+        label: `Emergência ativa (${ccmLabel})`,
+        detail: "Comando de emergência acionado no CCM.",
+        severity: "EMERGENCY",
+      });
+    }
+
+    if (faltaFase) {
+      alarms.push({
+        id: `${prefix}-falta-fase`,
+        label: `Falta de fase (${ccmLabel})`,
+        detail: "Verificar alimentação das fases do CCM.",
+        severity: "HIGH",
+      });
+    }
+
+    if (superAquecimento) {
+      alarms.push({
+        id: `${prefix}-super-aquecimento`,
+        label: `Superaquecimento (${ccmLabel})`,
+        detail: "Temperatura elevada detectada no painel.",
+        severity: "MEDIUM",
+      });
+    }
+  });
+
+  const severityWeight: Record<AlarmSeverity, number> = {
+    EMERGENCY: 3,
+    HIGH: 2,
+    MEDIUM: 1,
+  };
+
+  return alarms.sort(
+    (a, b) => severityWeight[b.severity] - severityWeight[a.severity]
+  );
+}
+
 /** ==================== PAGE PRINCIPAL ==================== */
 
 export function ManagementPage() {
@@ -709,10 +853,189 @@ export function ManagementPage() {
 
   const [now, setNow] = React.useState(() => new Date());
 
+  // Eficiências vindas do back-end
+  const [productiveEfficiencyPct, setProductiveEfficiencyPct] =
+    React.useState<number | null>(null);
+  const [energyEfficiencyPct, setEnergyEfficiencyPct] =
+    React.useState<number | null>(null);
+
+  const [energyEfficiencyInfo, setEnergyEfficiencyInfo] =
+    React.useState<EnergyEfficiencyResponse | null>(null);
+  const [productiveEfficiencyInfo, setProductiveEfficiencyInfo] =
+    React.useState<ProductiveEfficiencyResponse | null>(null);
+
+  const [elevatorsLoadPct, setElevatorsLoadPct] = React.useState<
+    number[] | null
+  >(null);
+  const [efficiencyError, setEfficiencyError] =
+    React.useState<string | null>(null);
+
+  // Consumo – datas de reset
+  const [resetCcm1, setResetCcm1] = React.useState<string | null>(null);
+  const [resetCcm2, setResetCcm2] = React.useState<string | null>(null);
+  const [consumptionLoading, setConsumptionLoading] = React.useState(false);
+  const [consumptionError, setConsumptionError] =
+    React.useState<string | null>(null);
+
+  // Tags combinadas de todos os CCMs
+  const { values: allTagValues } = useMultiCcmTags({ intervalMs: 1500 });
+
   React.useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Busca periódica das eficiências + elevadores
+  React.useEffect(() => {
+    let mounted = true;
+    const intervalMs = 2000;
+
+    async function fetchEfficiencies() {
+      try {
+        const [productive, energy, elevators] = await Promise.all([
+          getProductiveEfficiency(),
+          getEnergyEfficiency(),
+          getElevatorsLoad(),
+        ]);
+
+        if (!mounted) return;
+
+        // PRODUTIVA
+        let prodBase: number | null = null;
+        if (
+          productive &&
+          typeof (productive as any).overallEfficiency === "number"
+        ) {
+          prodBase = (productive as any).overallEfficiency;
+          setProductiveEfficiencyInfo(
+            productive as ProductiveEfficiencyResponse
+          );
+        } else if (productive && typeof (productive as any).value === "number") {
+          prodBase = (productive as any).value;
+          setProductiveEfficiencyInfo(null);
+        } else {
+          setProductiveEfficiencyInfo(null);
+        }
+
+        setProductiveEfficiencyPct(
+          prodBase !== null ? prodBase * 100 : null
+        );
+
+        // ENERGÉTICA
+        let energyBase: number | null = null;
+        if (
+          energy &&
+          typeof (energy as any).overallLoadPercentage === "number"
+        ) {
+          energyBase = (energy as any).overallLoadPercentage; // 0–1
+          setEnergyEfficiencyInfo(energy as EnergyEfficiencyResponse);
+        } else if (energy && typeof (energy as any).value === "number") {
+          energyBase = (energy as any).value;
+          setEnergyEfficiencyInfo(null);
+        } else {
+          setEnergyEfficiencyInfo(null);
+        }
+
+        setEnergyEfficiencyPct(
+          energyBase !== null ? energyBase * 100 : null
+        );
+
+        setElevatorsLoadPct(
+          Array.isArray(elevators)
+            ? elevators.map((e: any) =>
+                typeof e.loadPercentage === "number" ? e.loadPercentage * 100 : 0
+              )
+            : null
+        );
+
+        setEfficiencyError(null);
+      } catch (err: any) {
+        if (!mounted) return;
+        setEfficiencyError(
+          err?.message ?? "Erro ao buscar dados de eficiência"
+        );
+      }
+    }
+
+    fetchEfficiencies();
+    const timer = window.setInterval(fetchEfficiencies, intervalMs);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  // Busca inicial das datas de reset
+  React.useEffect(() => {
+    let mounted = true;
+    async function fetchResetDates() {
+      try {
+        const [d1, d2] = await Promise.all([
+          getConsumptionResetDate("ccm1"),
+          getConsumptionResetDate("ccm2"),
+        ]);
+
+        if (!mounted) return;
+
+        if (d1) setResetCcm1(d1.date ?? null);
+        if (d2) {
+          setResetCcm2(d2.date ?? null);
+        }
+      } catch {
+        // Se der erro aqui, só não mostra tooltip; não quebra tela
+      }
+    }
+
+    fetchResetDates();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function handleReset(ccm: "ccm1" | "ccm2") {
+    try {
+      setConsumptionLoading(true);
+      setConsumptionError(null);
+
+      await postResetConsumption(ccm);
+
+      const dateInfo = await getConsumptionResetDate(ccm);
+
+      if (dateInfo) {
+        if (ccm === "ccm1") {
+          setResetCcm1(dateInfo.date ?? null);
+        } else {
+          setResetCcm2(dateInfo.date ?? null);
+        }
+      }
+    } catch (err: any) {
+      setConsumptionError(
+        err?.message ?? "Erro ao zerar consumo. Tente novamente."
+      );
+    } finally {
+      setConsumptionLoading(false);
+    }
+  }
+
+  const rootClass = isDark
+    ? "min-h-screen w-full px-4 sm:px-6 pb-2 pt-2 bg-slate-950 text-slate-50"
+    : "min-h-screen w-full px-4 sm:px-6 pb-2 pt-2 bg-slate-100 text-slate-900";
+
+  const cardBase =
+    "rounded-2xl border shadow-sm px-4 py-3 sm:px-5 sm:py-3 xl:px-6 xl:py-3 flex flex-col";
+  const cardDark = "bg-slate-900/70 border-slate-800";
+  const cardLight = "bg-white border-slate-200";
+
+  const subtleTextClass = isDark ? "text-slate-400" : "text-slate-700";
+
+  const timeClass = isDark
+    ? "font-mono text-xl sm:text-2xl xl:text-3xl text-slate-50"
+    : "font-mono text-xl sm:text-2xl xl:text-3xl text-slate-900";
+
+  const dateClass = isDark
+    ? "text-[11px] sm:text-xs xl:text-sm capitalize text-slate-100"
+    : "text-[11px] sm:text-xs xl:text-sm capitalize text-slate-800";
 
   const dateFmt = new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
@@ -727,59 +1050,97 @@ export function ManagementPage() {
     second: "2-digit",
   });
 
-  const rootClass = isDark
-    ? "min-h-screen w-full px-4 sm:px-6 pb-2 pt-2 bg-slate-950 text-slate-50"
-    : "min-h-screen w-full px-4 sm:px-6 pb-2 pt-2 bg-slate-100 text-slate-900";
+  // Resumo de motores baseado nas tags (TODOS os CCMs)
+  const motorsSummary = React.useMemo(
+    () => computeMotorsSummary(allTagValues),
+    [allTagValues]
+  );
+  const motorsData = motorsSummary;
 
-  const cardBase =
-    "rounded-2xl border shadow-sm px-4 py-3 sm:px-5 sm:py-3 xl:px-6 xl:py-3 flex flex-col";
-  const cardDark = "bg-slate-900/70 border-slate-800";
-  const cardLight = "bg-white border-slate-200";
+  const productiveValue = productiveEfficiencyPct ?? 0; // 0–100
+  const energyValue = energyEfficiencyPct ?? 0; // 0–100
+  const elevatorsValues = elevatorsLoadPct ?? Array(12).fill(0);
 
-  const subtleTextClass = isDark ? "text-slate-400" : "text-slate-700";
+  // Valores das tags
+  const consumo1 =
+    typeof allTagValues["CCM1_CONSUMO_TOTAL"] === "number"
+      ? allTagValues["CCM1_CONSUMO_TOTAL"]
+      : null;
+  const consumo2 =
+    typeof allTagValues["CCM2_CONSUMO_TOTAL"] === "number"
+      ? allTagValues["CCM2_CONSUMO_TOTAL"]
+      : null;
 
-  // ====== NOVO: busca eficiências do back-end ======
-  const { productive, energy } = useEfficiency({ intervalMs: 5000 });
+  const fp1 =
+    typeof allTagValues["CCM1_FATOR_POTENCIA"] === "number"
+      ? allTagValues["CCM1_FATOR_POTENCIA"]
+      : 0;
 
-  // Converte overallEfficiency (0–1) para 0–100%.
-  const productiveEfficiency = (() => {
-    const val = productive?.overallEfficiency;
-    if (typeof val === "number" && !Number.isNaN(val)) {
-      return Math.max(0, Math.min(100, val * 100));
-    }
-    // fallback se o back não responder
-    return 72;
-  })();
+  const fp2 =
+    typeof allTagValues["CCM2_FATOR_POTENCIA"] === "number"
+      ? allTagValues["CCM2_FATOR_POTENCIA"]
+      : 0;
 
-  const energyEfficiency = (() => {
-    const val = energy?.overallEfficiency;
-    if (typeof val === "number" && !Number.isNaN(val)) {
-      return Math.max(0, Math.min(100, val * 100));
-    }
-    // fallback: complementar da produtiva, só para não quebrar
-    return 100 - productiveEfficiency;
-  })();
+  // CCM1 – aceita CCM1_POTENCIA ou PA_CCM1 ou PA1
+  const kva1 =
+    typeof allTagValues["CCM1_POTENCIA"] === "number"
+      ? allTagValues["CCM1_POTENCIA"]
+      : typeof allTagValues["PA_CCM1"] === "number"
+      ? allTagValues["PA_CCM1"]
+      : typeof allTagValues["PA1"] === "number"
+      ? allTagValues["PA1"]
+      : 0;
 
-  // ====== MOCKS QUE AINDA NÃO FORAM SUBSTITUÍDOS POR TAGS ======
-  const mockElevators = [80, 55, 63, 40, 95, 70, 35, 20, 50, 60, 45, 30];
-  const mockMotors = { active: 10, alarm: 10, off: 30 };
+  // CCM2 – aceita tanto CCM2_POTENCIA quanto PA
+  const kva2 =
+    typeof allTagValues["CCM2_POTENCIA"] === "number"
+      ? allTagValues["CCM2_POTENCIA"]
+      : typeof allTagValues["PA"] === "number"
+      ? allTagValues["PA"]
+      : 0;
 
-  const mockFp1 = 0.93;
-  const mockFp2 = 0.88;
+  const temp1 =
+    typeof allTagValues["CCM1_TEMP_PAINEL"] === "number"
+      ? allTagValues["CCM1_TEMP_PAINEL"]
+      : null;
+  const temp2 =
+    typeof allTagValues["CCM2_TEMP_PAINEL"] === "number"
+      ? allTagValues["CCM2_TEMP_PAINEL"]
+      : null;
 
-  const mockApparent1 = 650;
-  const mockApparent2 = 820;
+  const alarms = React.useMemo(() => buildAlarms(allTagValues), [allTagValues]);
+  const hasAlarms = alarms.length > 0;
 
-  const mockTemp1 = 47.1;
-  const mockTemp2 = 52.3;
+  const resetTooltipCcm1 = formatResetTooltip(resetCcm1);
+  const resetTooltipCcm2 = formatResetTooltip(resetCcm2);
 
-  const timeClass = isDark
-    ? "font-mono text-xl sm:text-2xl xl:text-3xl text-slate-50"
-    : "font-mono text-xl sm:text-2xl xl:text-3xl text-slate-900";
+  // descrição rica pra eficiência energética
+  const energyDescription = efficiencyError
+    ? `Erro: ${efficiencyError}`
+    : energyEfficiencyInfo
+    ? (() => {
+        const info = energyEfficiencyInfo;
+        return `Baseado em ${info.activeMotorsCount} motores ligados. Corrente total: ${info.totalActiveCurrent.toFixed(
+          1
+        )} A de ${info.totalNominalCurrentOfActives.toFixed(
+          1
+        )} A nominal.`;
+      })()
+    : "Indicador geral de eficiência de todos os motores.";
 
-  const dateClass = isDark
-    ? "text-[11px] sm:text-xs xl:text-sm capitalize text-slate-100"
-    : "text-[11px] sm:text-xs xl:text-sm capitalize text-slate-800";
+  // descrição rica pra eficiência produtiva
+  const productiveDescription = efficiencyError
+    ? `Erro: ${efficiencyError}`
+    : productiveEfficiencyInfo
+    ? (() => {
+        const info = productiveEfficiencyInfo;
+        return `Baseado em ${info.activeProductiveMotorsCount} motores produtivos ligados. Corrente total: ${info.totalActiveCurrent.toFixed(
+          1
+        )} A de ${info.totalNominalCurrentOfActives.toFixed(
+          1
+        )} A nominal.`;
+      })()
+    : "Indicador geral de eficiência dos elevadores e redlers.";
 
   return (
     <div className={rootClass}>
@@ -803,9 +1164,9 @@ export function ManagementPage() {
             </header>
             <div className="flex-1 flex items-center justify-center ">
               <EfficiencyDonut
-                value={productiveEfficiency}
+                value={productiveValue}
                 isDark={isDark}
-                description="Indicador geral de eficiência dos elevadores e redlers."
+                description={productiveDescription}
               />
             </div>
           </section>
@@ -828,14 +1189,14 @@ export function ManagementPage() {
             </header>
             <div className="flex-1 flex items-center justify-center">
               <EfficiencyDonut
-                value={energyEfficiency}
+                value={energyValue}
                 isDark={isDark}
-                description="Indicador geral de eficiência de todos os motores."
+                description={energyDescription}
               />
             </div>
           </section>
 
-          {/* Motores */}
+          {/* Motores (todos os CCMs) */}
           <section
             className={`${cardBase} ${
               isDark ? cardDark : cardLight
@@ -854,9 +1215,9 @@ export function ManagementPage() {
 
             <div className="flex-1 flex items-center justify-center">
               <MotorsDonut
-                active={mockMotors.active}
-                alarm={mockMotors.alarm}
-                off={mockMotors.off}
+                active={motorsData.active}
+                alarm={motorsData.alarm}
+                off={motorsData.off}
                 isDark={isDark}
               />
             </div>
@@ -878,19 +1239,19 @@ export function ManagementPage() {
                 Tempo real
               </span>
             </header>
-            <ElevatorsChart values={mockElevators} isDark={isDark} />
+            <ElevatorsChart values={elevatorsValues} isDark={isDark} />
           </section>
 
           {/* Temperaturas */}
           <section className="flex flex-col gap-3 xl:col-span-1">
             <TemperatureCard
               label="Temperatura (CCM 1)"
-              value={mockTemp1}
+              value={temp1}
               isDark={isDark}
             />
             <TemperatureCard
               label="Temperatura (CCM 2)"
-              value={mockTemp2}
+              value={temp2}
               isDark={isDark}
             />
           </section>
@@ -907,48 +1268,89 @@ export function ManagementPage() {
               </h2>
             </header>
 
-            {/* Área rolável para não quebrar o layout quando tiver muitos alarmes */}
             <div className="flex-1 min-h-0 mt-1 relative">
-              <div className="h-full max-h-40 flex flex-col gap-2 text-sm xl:text-base overflow-y-auto pr-1">
-                <div className="font-semibold text-rose-500">
-                  • Falha no motor do elevador E5
-                </div>
-                <div className="font-medium text-amber-500">
-                  • Temperatura alta no CCM 2
-                </div>
-                <div className="font-medium text-amber-500">
-                  • Temperatura alta no CCM 2
-                </div>
-                <div className="font-medium text-amber-500">
-                  • Temperatura alta no CCM 2
-                </div>
-                <div className="font-medium text-amber-500">
-                  • Temperatura alta no CCM 2
-                </div>
-                <div className="font-medium text-amber-500">
-                  • Temperatura alta no CCM 2
-                </div>
-                <div className="font-medium text-amber-500">
-                  • Temperatura alta no CCM 2
-                </div>
-                <div className="font-medium text-amber-500">
-                  • Temperatura alta no CCM 2
-                </div>
-              </div>
+              {hasAlarms ? (
+                <>
+                  <div className="h-full max-h-40 flex flex-col gap-2 text-sm xl:text-base overflow-y-auto pr-1">
+                    {alarms.map((alarm) => {
+                      const base =
+                        "flex items-start gap-2 rounded-xl border px-3 py-2 text-xs sm:text-sm";
 
-              {/* Fade + dica de scroll */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 flex items-end justify-center">
+                      const styleBySeverity = (() => {
+                        switch (alarm.severity) {
+                          case "EMERGENCY":
+                            return isDark
+                              ? "border-rose-500/40 bg-rose-950/70 text-rose-100"
+                              : "border-rose-200 bg-rose-50 text-rose-900";
+                          case "HIGH":
+                            return isDark
+                              ? "border-amber-500/40 bg-amber-950/40 text-amber-100"
+                              : "border-amber-200 bg-amber-50 text-amber-900";
+                          case "MEDIUM":
+                          default:
+                            return isDark
+                              ? "border-sky-500/40 bg-sky-950/40 text-sky-100"
+                              : "border-sky-200 bg-sky-50 text-sky-900";
+                        }
+                      })();
+
+                      const dotColor = (() => {
+                        switch (alarm.severity) {
+                          case "EMERGENCY":
+                            return isDark ? "bg-rose-400" : "bg-rose-500";
+                          case "HIGH":
+                            return isDark ? "bg-amber-400" : "bg-amber-500";
+                          case "MEDIUM":
+                          default:
+                            return isDark ? "bg-sky-400" : "bg-sky-500";
+                        }
+                      })();
+
+                      return (
+                        <div
+                          key={alarm.id}
+                          className={`${base} ${styleBySeverity}`}
+                        >
+                          <span
+                            className={`mt-1 h-2 w-2 rounded-full ${dotColor}`}
+                          />
+                          <div className="flex-1">
+                            <div className="font-semibold">{alarm.label}</div>
+                            {alarm.detail && (
+                              <div className="text-[11px] opacity-80">
+                                {alarm.detail}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 flex items-end justify-center">
+                    <div
+                      className={`w-full h-full ${
+                        isDark
+                          ? "bg-gradient-to-t from-slate-900/95 to-transparent"
+                          : "bg-gradient-to-t from-white to-transparent"
+                      }`}
+                    />
+                    <span className="absolute mb-1 text-[10px] uppercase tracking-wide text-slate-400">
+                      Role para ver mais
+                    </span>
+                  </div>
+                </>
+              ) : (
                 <div
-                  className={`w-full h-full ${
+                  className={
                     isDark
-                      ? "bg-gradient-to-t from-slate-900/95 to-transparent"
-                      : "bg-gradient-to-t from-white to-transparent"
-                  }`}
-                />
-                <span className="absolute mb-1 text-[10px] uppercase tracking-wide text-slate-400">
-                  Role para ver mais
-                </span>
-              </div>
+                      ? "rounded-xl bg-emerald-900/60 px-4 py-2 text-sm text-emerald-100"
+                      : "rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-900"
+                  }
+                >
+                  Nenhum alarme ativo.
+                </div>
+              )}
             </div>
           </section>
 
@@ -969,12 +1371,16 @@ export function ManagementPage() {
                     CCM 1
                   </span>
                   <p className="text-3xl xl:text-4xl font-semibold">
-                    12345 kWh
+                    {typeof consumo1 === "number" ? consumo1.toFixed(0) : "--"}{" "}
+                    kWh
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="text-[11px] sm:text-xs px-3 py-1 rounded-full border border-rose-500 text-rose-500 hover:bg-rose-500/10 transition-colors"
+                  onClick={() => handleReset("ccm1")}
+                  disabled={consumptionLoading}
+                  title={resetTooltipCcm1}
+                  className="text-[11px] sm:text-xs px-3 py-1 rounded-full border border-rose-500 text-rose-500 hover:bg-rose-500/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Zerar
                 </button>
@@ -988,20 +1394,30 @@ export function ManagementPage() {
                     CCM 2
                   </span>
                   <p className="text-3xl xl:text-4xl font-semibold">
-                    67890 kWh
+                    {typeof consumo2 === "number" ? consumo2.toFixed(0) : "--"}{" "}
+                    kWh
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="text-[11px] sm:text-xs px-3 py-1 rounded-full border border-rose-500 text-rose-500 hover:bg-rose-500/10 transition-colors"
+                  onClick={() => handleReset("ccm2")}
+                  disabled={consumptionLoading}
+                  title={resetTooltipCcm2}
+                  className="text-[11px] sm:text-xs px-3 py-1 rounded-full border border-rose-500 text-rose-500 hover:bg-rose-500/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Zerar
                 </button>
               </div>
             </div>
 
+            {consumptionError && (
+              <p className="mt-2 text-[11px] sm:text-xs xl:text-sm text-rose-500">
+                {consumptionError}
+              </p>
+            )}
+
             <p
-              className={`mt-2 text-[11px] sm:text-xs xl:text-sm leading-snug ${subtleTextClass}`}
+              className={`mt-1 text-[11px] sm:text-xs xl:text-sm leading-snug ${subtleTextClass}`}
             >
               Consumo acumulado individual por CCM desde o último reset.
             </p>
@@ -1024,7 +1440,7 @@ export function ManagementPage() {
                   CCM 1 · Trafo 1000 kVA
                 </span>
                 <ApparentPowerGauge
-                  value={mockApparent1}
+                  value={kva1 as number}
                   max={1000}
                   isDark={isDark}
                 />
@@ -1036,7 +1452,7 @@ export function ManagementPage() {
                   CCM 2 · Trafo 1200 kVA
                 </span>
                 <ApparentPowerGauge
-                  value={mockApparent2}
+                  value={kva2 as number}
                   max={1200}
                   isDark={isDark}
                 />
@@ -1066,7 +1482,7 @@ export function ManagementPage() {
                 >
                   CCM 1
                 </span>
-                <PowerFactorGauge value={mockFp1} isDark={isDark} />
+                <PowerFactorGauge value={fp1 as number} isDark={isDark} />
               </div>
 
               <div className="flex flex-col items-center">
@@ -1075,7 +1491,7 @@ export function ManagementPage() {
                 >
                   CCM 2
                 </span>
-                <PowerFactorGauge value={mockFp2} isDark={isDark} />
+                <PowerFactorGauge value={fp2 as number} isDark={isDark} />
               </div>
             </div>
           </section>

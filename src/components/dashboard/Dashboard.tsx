@@ -27,12 +27,15 @@ export function Dashboard({ config }: Props) {
 
   const v = values ?? {};
   const m = meta ?? {};
-  const prefix = config.key.toUpperCase(); // "CCM1" ou "CCM2"
 
   const getNumber = (key: string) => {
     const raw = v[key];
     return typeof raw === "number" ? raw : undefined;
   };
+
+  // tentamos pegar a chave do CCM (ex: "ccm1" / "ccm2")
+  const ccmKey = ((config as any).key ?? "ccm1") as string;
+  const isCcm2 = ccmKey.toLowerCase().includes("2");
 
   const pageClass = isDark
     ? "min-h-screen bg-slate-950 text-slate-100"
@@ -81,11 +84,11 @@ export function Dashboard({ config }: Props) {
   const isTrue = (raw: unknown): boolean =>
     raw === true || raw === 1 || raw === 1.0 || raw === "1";
 
-  // ====== STATUS / ALARMES (coils com prefixo CCM1_ / CCM2_) ======
-  const emergenciaAtiva = isTrue(v[`${prefix}_STATUS_EMERGENCIA`]);
-  const faltaFase = isTrue(v[`${prefix}_STATUS_FALTA_FASE`]);
-  const superAquecimento = isTrue(v[`${prefix}_STATUS_SUPER_AQUECIMENTO`]);
-  const modoAutomatico = isTrue(v[`${prefix}_MODO_AUTOMATICO`]);
+  // ====== STATUS / ALARMES ======
+  const emergenciaAtiva = isTrue(v["STATUS_EMERGENCIA"]);
+  const faltaFase = isTrue(v["STATUS_FALTA_FASE"]);
+  const superAquecimento = isTrue(v["STATUS_SUPER_AQUECIMENTO"]);
+  const modoAutomatico = isTrue(v["MODO_AUTOMATICO"]);
 
   const alarms: AlarmItem[] = [];
 
@@ -165,14 +168,47 @@ export function Dashboard({ config }: Props) {
     ? "text-lg font-semibold text-slate-50"
     : "text-lg font-semibold text-slate-900";
 
-  // ---- RESUMO DE MOTORES (tags que você vai criar no CLP) ----
-  const motoresTotal = Number(v[`${prefix}_MOTORES_TOTAL`] ?? 0);
-  const motoresAtivos = Number(v[`${prefix}_MOTORES_ATIVOS`] ?? 0);
-  const motoresFalha = Number(v[`${prefix}_MOTORES_FALHA`] ?? 0);
-  const motoresDesligados = Number(
-    v[`${prefix}_MOTORES_DESLIGADOS`] ??
-      motoresTotal - motoresAtivos - motoresFalha
-  );
+  // ---- RESUMO DE MOTORES: calculado a partir de Mxx_S e Mxx_F ----
+  const motorInfo = useMemo(() => {
+    // agrupa por "Mxx"
+    const groups = new Map<string, { s?: number; f?: number }>();
+
+    for (const key of Object.keys(v)) {
+      const match = /^M(\d+)_([AFHS])$/.exec(key);
+      if (!match) continue;
+
+      const id = match[1]; // ex: "75"
+      const suffix = match[2] as "A" | "F" | "H" | "S";
+      const val = getNumber(key);
+      if (val === undefined) continue;
+
+      const current = groups.get(id) ?? {};
+      if (suffix === "S") current.s = val;
+      if (suffix === "F") current.f = val;
+      groups.set(id, current);
+    }
+
+    const total = groups.size;
+    let ativos = 0;
+    let falha = 0;
+    let desligados = 0;
+
+    for (const motor of groups.values()) {
+      const fault = !!motor.f && motor.f !== 0;
+      const on = !!motor.s && motor.s !== 0;
+
+      if (fault) falha++;
+      else if (on) ativos++;
+      else desligados++;
+    }
+
+    return { total, ativos, falha, desligados };
+  }, [v]);
+
+  const motoresTotal = motorInfo.total;
+  const motoresAtivos = motorInfo.ativos;
+  const motoresFalha = motorInfo.falha;
+  const motoresDesligados = motorInfo.desligados;
 
   // Chip de modo auto/manual
   const modeChipClass =
@@ -184,6 +220,50 @@ export function Dashboard({ config }: Props) {
       : isDark
       ? "border-slate-600 bg-slate-900/60 text-slate-200"
       : "border-slate-300 bg-slate-50 text-slate-700");
+
+  // ====== RESOLUÇÃO DAS TAGS NOVAS / ANTIGAS (FP, FP2, CONSUMO1, CONSUMO2, HZ, HZ2, etc.) ======
+
+  // Fator de potência
+  const fpValue = isCcm2
+    ? getNumber("FP2") ??
+      getNumber("CCM2_FATOR_POTENCIA") ??
+      getNumber("FP")
+    : getNumber("FP") ??
+      getNumber("CCM1_FATOR_POTENCIA") ??
+      getNumber("FP2");
+
+  const fpQuality =
+    (isCcm2
+      ? m["FP2"]?.quality ?? m["CCM2_FATOR_POTENCIA"]?.quality
+      : m["FP"]?.quality ?? m["CCM1_FATOR_POTENCIA"]?.quality) ??
+    m["FP"]?.quality ??
+    m["FP2"]?.quality;
+
+  // Consumo total
+  const consumoValue = isCcm2
+    ? getNumber("CONSUMO2") ??
+      getNumber("CCM2_CONSUMO_TOTAL") ??
+      getNumber("CONSUMO_TOTAL")
+    : getNumber("CONSUMO1") ??
+      getNumber("CCM1_CONSUMO_TOTAL") ??
+      getNumber("CONSUMO_TOTAL");
+
+  const consumoQuality = isCcm2
+    ? m["CONSUMO2"]?.quality ??
+      m["CCM2_CONSUMO_TOTAL"]?.quality ??
+      m["CONSUMO_TOTAL"]?.quality
+    : m["CONSUMO1"]?.quality ??
+      m["CCM1_CONSUMO_TOTAL"]?.quality ??
+      m["CONSUMO_TOTAL"]?.quality;
+
+  // Frequência
+  const hzValue = isCcm2
+    ? getNumber("HZ2") ?? getNumber("HZ")
+    : getNumber("HZ") ?? getNumber("HZ2");
+
+  const hzQuality = isCcm2
+    ? m["HZ2"]?.quality ?? m["HZ"]?.quality
+    : m["HZ"]?.quality ?? m["HZ2"]?.quality;
 
   return (
     <div className={pageClass}>
@@ -330,23 +410,17 @@ export function Dashboard({ config }: Props) {
             <div className="mt-4 grid grid-cols-3 gap-4 text-center text-xs">
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L1-L2</span>
-                <span className={valueTextClass}>
-                  {v[`${prefix}_TENSAO_LL_L1L2`] ?? "--"}
-                </span>
+                <span className={valueTextClass}>{v["V1-V2"] ?? "--"}</span>
                 <span className={unitLabelClass}>V</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L2-L3</span>
-                <span className={valueTextClass}>
-                  {v[`${prefix}_TENSAO_LL_L2L3`] ?? "--"}
-                </span>
+                <span className={valueTextClass}>{v["V2-V3"] ?? "--"}</span>
                 <span className={unitLabelClass}>V</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L3-L1</span>
-                <span className={valueTextClass}>
-                  {v[`${prefix}_TENSAO_LL_L3L1`] ?? "--"}
-                </span>
+                <span className={valueTextClass}>{v["V3-V1"] ?? "--"}</span>
                 <span className={unitLabelClass}>V</span>
               </div>
             </div>
@@ -361,23 +435,17 @@ export function Dashboard({ config }: Props) {
             <div className="mt-4 grid grid-cols-3 gap-4 text-center text-xs">
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L1-N</span>
-                <span className={valueTextClass}>
-                  {v[`${prefix}_TENSAO_LN_L1N`] ?? "--"}
-                </span>
+                <span className={valueTextClass}>{v["V1-N"] ?? "--"}</span>
                 <span className={unitLabelClass}>V</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L2-N</span>
-                <span className={valueTextClass}>
-                  {v[`${prefix}_TENSAO_LN_L2N`] ?? "--"}
-                </span>
+                <span className={valueTextClass}>{v["V2-N"] ?? "--"}</span>
                 <span className={unitLabelClass}>V</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L3-N</span>
-                <span className={valueTextClass}>
-                  {v[`${prefix}_TENSAO_LN_L3N`] ?? "--"}
-                </span>
+                <span className={valueTextClass}>{v["V3-N"] ?? "--"}</span>
                 <span className={unitLabelClass}>V</span>
               </div>
             </div>
@@ -392,23 +460,17 @@ export function Dashboard({ config }: Props) {
             <div className="mt-4 grid grid-cols-3 gap-4 text-center text-xs">
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L1</span>
-                <span className={valueTextClass}>
-                  {v[`${prefix}_CORRENTE_L1`] ?? "--"}
-                </span>
+                <span className={valueTextClass}>{v["L1"] ?? "--"}</span>
                 <span className={unitLabelClass}>A</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L2</span>
-                <span className={valueTextClass}>
-                  {v[`${prefix}_CORRENTE_L2`] ?? "--"}
-                </span>
+                <span className={valueTextClass}>{v["L2"] ?? "--"}</span>
                 <span className={unitLabelClass}>A</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L3</span>
-                <span className={valueTextClass}>
-                  {v[`${prefix}_CORRENTE_L3`] ?? "--"}
-                </span>
+                <span className={valueTextClass}>{v["L3"] ?? "--"}</span>
                 <span className={unitLabelClass}>A</span>
               </div>
             </div>
@@ -421,21 +483,15 @@ export function Dashboard({ config }: Props) {
           <div className={cardBaseClass}>
             <div className="flex items-center justify-between">
               <h3 className={cardTitleClass}>Potência</h3>
-              <div className="flex items-center gap-1 text-[11px]">
-                <span className="h-2 w-2 rounded-full bg-slate-500" />
-                <span className="text-slate-400">
-                  {m[`${prefix}_POTENCIA`]?.quality ?? "UNKNOWN"}
-                </span>
-              </div>
             </div>
 
             <div className="mt-3">
               <TagValueCard
                 label=""
-                value={getNumber(`${prefix}_POTENCIA`)}
-                unit="kVA"
+                value={getNumber("KW")}
+                unit="kW"
                 decimals={1}
-                quality={m[`${prefix}_POTENCIA`]?.quality}
+                quality={m["KW"]?.quality}
               />
             </div>
           </div>
@@ -444,21 +500,15 @@ export function Dashboard({ config }: Props) {
           <div className={cardBaseClass}>
             <div className="flex items-center justify-between">
               <h3 className={cardTitleClass}>Fator de Potência</h3>
-              <div className="flex items-center gap-1 text-[11px]">
-                <span className="h-2 w-2 rounded-full bg-slate-500" />
-                <span className="text-slate-400">
-                  {m[`${prefix}_FATOR_POTENCIA`]?.quality ?? "UNKNOWN"}
-                </span>
-              </div>
             </div>
 
             <div className="mt-3">
               <TagValueCard
                 label=""
-                value={getNumber(`${prefix}_FATOR_POTENCIA`)}
+                value={fpValue}
                 unit="cos φ"
                 decimals={2}
-                quality={m[`${prefix}_FATOR_POTENCIA`]?.quality}
+                quality={fpQuality}
               />
             </div>
           </div>
@@ -467,21 +517,15 @@ export function Dashboard({ config }: Props) {
           <div className={cardBaseClass}>
             <div className="flex items-center justify-between">
               <h3 className={cardTitleClass}>Frequência</h3>
-              <div className="flex items-center gap-1 text-[11px]">
-                <span className="h-2 w-2 rounded-full bg-slate-500" />
-                <span className="text-slate-400">
-                  {m[`${prefix}_FREQUENCIA`]?.quality ?? "UNKNOWN"}
-                </span>
-              </div>
             </div>
 
             <div className="mt-3">
               <TagValueCard
                 label=""
-                value={getNumber(`${prefix}_FREQUENCIA`)}
+                value={hzValue}
                 unit="Hz"
                 decimals={1}
-                quality={m[`${prefix}_FREQUENCIA`]?.quality}
+                quality={hzQuality}
               />
             </div>
           </div>
@@ -493,21 +537,15 @@ export function Dashboard({ config }: Props) {
           <div className={cardBaseClass}>
             <div className="flex items-center justify-between">
               <h3 className={cardTitleClass}>Consumo Total</h3>
-              <div className="flex items-center gap-1 text-[11px]">
-                <span className="h-2 w-2 rounded-full bg-slate-500" />
-                <span className="text-slate-400">
-                  {m[`${prefix}_CONSUMO_TOTAL`]?.quality ?? "UNKNOWN"}
-                </span>
-              </div>
             </div>
 
             <div className="mt-3">
               <TagValueCard
                 label=""
-                value={getNumber(`${prefix}_CONSUMO_TOTAL`)}
+                value={consumoValue}
                 unit="kWh"
                 decimals={0}
-                quality={m[`${prefix}_CONSUMO_TOTAL`]?.quality}
+                quality={consumoQuality}
               />
             </div>
           </div>
@@ -516,21 +554,15 @@ export function Dashboard({ config }: Props) {
           <div className={cardBaseClass}>
             <div className="flex items-center justify-between">
               <h3 className={cardTitleClass}>Temperatura Painel (CCM)</h3>
-              <div className="flex items-center gap-1 text-[11px]">
-                <span className="h-2 w-2 rounded-full bg-slate-500" />
-                <span className="text-slate-400">
-                  {m[`${prefix}_TEMP_PAINEL`]?.quality ?? "UNKNOWN"}
-                </span>
-              </div>
             </div>
 
             <div className="mt-3">
               <TagValueCard
                 label=""
-                value={getNumber(`${prefix}_TEMP_PAINEL`)}
+                value={getNumber("TEMP_PAINEL")}
                 unit="°C"
                 decimals={1}
-                quality={m[`${prefix}_TEMP_PAINEL`]?.quality}
+                quality={m["TEMP_PAINEL"]?.quality}
               />
             </div>
           </div>

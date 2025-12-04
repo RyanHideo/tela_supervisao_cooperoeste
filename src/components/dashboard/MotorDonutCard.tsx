@@ -155,7 +155,7 @@ export function MotorDonutCard({ total, ativos, falha, desligados }: Props) {
           <div className="w-full max-w-[190px] space-y-1.5 text-sm">
             <LegendRow
               color="bg-emerald-500"
-              label="Ativos"
+              label="ligados"
               valor={summary.a}
               pct={summary.pctAtivos}
               isDark={isDark}

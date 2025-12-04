@@ -4,16 +4,13 @@ import { useTheme } from "../../theme/ThemeContext";
 import type { MotorSummary } from "./MotorsPage";
 
 type Props = {
-  motor: MotorSummary | null;
+  motor: MotorSummary;   // <-- não é mais | null
   onClose: () => void;
 };
 
 export function MotorDetailsModal({ motor, onClose }: Props) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-
-  // Se não tiver motor selecionado, não renderiza nada
-  if (!motor) return null;
 
   // controla animação de entrada/saída
   const [isVisible, setIsVisible] = useState(false);
@@ -125,7 +122,7 @@ export function MotorDetailsModal({ motor, onClose }: Props) {
             </div>
           </div>
 
-          {/* Informações de status / horímetro / alarme */}
+          {/* Informações de status / horímetro / corrente / alarme */}
           <div className="flex flex-col justify-center gap-4 text-sm">
             <div>
               <span
@@ -150,6 +147,23 @@ export function MotorDetailsModal({ motor, onClose }: Props) {
                 {motor.horimetroH} h
               </p>
             </div>
+
+            {motor.currentA != null && (
+              <div>
+                <span
+                  className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${labelColor}`}
+                >
+                  Corrente
+                </span>
+                <p className={`mt-1 text-base font-semibold ${infoTextColor}`}>
+                  {motor.currentA.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  })}{" "}
+                  A
+                </p>
+              </div>
+            )}
 
             <div>
               <span
@@ -178,10 +192,10 @@ export function MotorDetailsModal({ motor, onClose }: Props) {
               : "border-slate-200 text-slate-500")
           }
         >
-          <p>Percentual de carga em tempo real.</p>
+          <p>Percentual de carga e corrente em tempo real.</p>
           <p>
-            Valores em tempo real com base na corrente/carga do CLP (limites
-            definidos no backend).
+            Valores baseados nas leituras de corrente do CLP e nos limites
+            definidos no backend.
           </p>
         </div>
       </div>
