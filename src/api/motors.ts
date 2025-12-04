@@ -9,7 +9,7 @@ export type MotorOverviewItem = {
   hours: number;
 };
 
-const RAW_BASE = process.env.REACT_APP_API_BASE ?? "http://localhost:9090";
+const RAW_BASE = import.meta.env.REACT_APP_API_BASE ?? "http://localhost:9090";
 const API_BASE = RAW_BASE.replace(/\/+$/, "");
 
 export async function getMotorsOverview(): Promise<MotorOverviewItem[]> {

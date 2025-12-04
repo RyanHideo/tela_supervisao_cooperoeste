@@ -908,7 +908,7 @@ export function ManagementPage() {
         ) {
           prodBase = (productive as any).overallEfficiency;
           setProductiveEfficiencyInfo(
-            productive as ProductiveEfficiencyResponse
+            productive as unknown as ProductiveEfficiencyResponse
           );
         } else if (productive && typeof (productive as any).value === "number") {
           prodBase = (productive as any).value;
@@ -928,7 +928,9 @@ export function ManagementPage() {
           typeof (energy as any).overallLoadPercentage === "number"
         ) {
           energyBase = (energy as any).overallLoadPercentage; // 0–1
-          setEnergyEfficiencyInfo(energy as EnergyEfficiencyResponse);
+          setEnergyEfficiencyInfo(
+            energy as unknown as EnergyEfficiencyResponse
+          );
         } else if (energy && typeof (energy as any).value === "number") {
           energyBase = (energy as any).value;
           setEnergyEfficiencyInfo(null);
