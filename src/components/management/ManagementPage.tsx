@@ -340,7 +340,7 @@ function PowerFactorGauge({
   const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
-  const labelRadius = rOuter + 24;
+  const labelRadius = rOuter + 28;
   const leftAngle = -65;
   const centerAngle = 0;
   const rightAngle = 65;
@@ -348,6 +348,40 @@ function PowerFactorGauge({
   const leftPos = polarToCartesian(cx, cy, labelRadius, leftAngle);
   const centerPos = polarToCartesian(cx, cy, labelRadius, centerAngle);
   const rightPos = polarToCartesian(cx, cy, labelRadius, rightAngle);
+
+  // ângulos das linhas de zona: onde começa IDEAL e onde volta a ser CRÍTICO
+  const zoneAngleLeftBoundary = -18;
+  const zoneAngleRightBoundary = 18;
+  const tickInnerR = rOuter - 10;
+  const tickOuterR = rOuter + 10;
+
+  const tickLeftInner = polarToCartesian(
+    cx,
+    cy,
+    tickInnerR,
+    zoneAngleLeftBoundary
+  );
+  const tickLeftOuter = polarToCartesian(
+    cx,
+    cy,
+    tickOuterR,
+    zoneAngleLeftBoundary
+  );
+  const tickRightInner = polarToCartesian(
+    cx,
+    cy,
+    tickInnerR,
+    zoneAngleRightBoundary
+  );
+  const tickRightOuter = polarToCartesian(
+    cx,
+    cy,
+    tickOuterR,
+    zoneAngleRightBoundary
+  );
+
+  // cor bem contrastante pras linhas
+  const tickColor = isDark ? "#ffffff" : "#0f172a";
 
   return (
     <div className="flex flex-col items-center gap-2 px-4">
@@ -373,6 +407,7 @@ function PowerFactorGauge({
           </linearGradient>
         </defs>
 
+        {/* trilho externo + gradiente */}
         <path
           d={arcPathOuter}
           stroke={outerTrackColor}
@@ -387,6 +422,28 @@ function PowerFactorGauge({
           fill="none"
           strokeLinecap="round"
         />
+
+        {/* linhas de zona (CRÍTICO / IDEAL) – bem visíveis */}
+        <line
+          x1={tickLeftInner.x}
+          y1={tickLeftInner.y}
+          x2={tickLeftOuter.x}
+          y2={tickLeftOuter.y}
+          stroke={tickColor}
+          strokeWidth={6}
+          strokeLinecap="round"
+        />
+        <line
+          x1={tickRightInner.x}
+          y1={tickRightInner.y}
+          x2={tickRightOuter.x}
+          y2={tickRightOuter.y}
+          stroke={tickColor}
+          strokeWidth={6}
+          strokeLinecap="round"
+        />
+
+        {/* base branca */}
         <path
           d={arcPathBase}
           stroke={baseColor}
@@ -395,6 +452,7 @@ function PowerFactorGauge({
           strokeLinecap="round"
         />
 
+        {/* ponteiro */}
         <line
           x1={cx}
           y1={cy}
@@ -406,16 +464,16 @@ function PowerFactorGauge({
         />
         <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
 
+        {/* labels CRÍTICO / IDEAL com fonte maior */}
         <text
           x={leftPos.x}
           y={leftPos.y}
           textAnchor="middle"
           dominantBaseline="central"
-          fontSize={14}
-          className="font-semibold fill-rose-500"
-          transform={`rotate(${leftAngle + 0}, ${leftPos.x - 5}, ${
-            leftPos.y + 5
-          })`}
+          fontSize={22}
+          className="font-semibold"
+          fill="#ef4444"
+          transform={`rotate(${leftAngle}, ${leftPos.x - 5}, ${leftPos.y + 5})`}
         >
           CRÍTICO
         </text>
@@ -425,8 +483,9 @@ function PowerFactorGauge({
           y={centerPos.y}
           textAnchor="middle"
           dominantBaseline="central"
-          fontSize={15}
-          className="font-semibold fill-emerald-500"
+          fontSize={24}
+          className="font-semibold"
+          fill="#22c55e"
         >
           IDEAL
         </text>
@@ -436,9 +495,10 @@ function PowerFactorGauge({
           y={rightPos.y}
           textAnchor="middle"
           dominantBaseline="central"
-          fontSize={14}
-          className="font-semibold fill-rose-500"
-          transform={`rotate(${rightAngle - 0}, ${rightPos.x + 5}, ${
+          fontSize={22}
+          className="font-semibold"
+          fill="#ef4444"
+          transform={`rotate(${rightAngle}, ${rightPos.x + 5}, ${
             rightPos.y + 5
           })`}
         >
@@ -510,6 +570,42 @@ function ApparentPowerGauge({
   const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
+  // limites de zona em %
+  const idealEndPct = 40; // 0–40% IDEAL
+  const attentionEndPct = 75; // 40–75% ATENÇÃO, >75% CRÍTICO
+
+  const zoneAngleIdealEnd = -90 + (idealEndPct / 100) * 180;
+  const zoneAngleAttentionEnd = -90 + (attentionEndPct / 100) * 180;
+
+  const tickInnerR = rOuter - 10;
+  const tickOuterR = rOuter + 12;
+  const tickColor = isDark ? "#f9fafb" : "#111827";
+
+  const tickIdealInner = polarToCartesian(
+    cx,
+    cy,
+    tickInnerR,
+    zoneAngleIdealEnd
+  );
+  const tickIdealOuter = polarToCartesian(
+    cx,
+    cy,
+    tickOuterR,
+    zoneAngleIdealEnd
+  );
+  const tickAttentionInner = polarToCartesian(
+    cx,
+    cy,
+    tickInnerR,
+    zoneAngleAttentionEnd
+  );
+  const tickAttentionOuter = polarToCartesian(
+    cx,
+    cy,
+    tickOuterR,
+    zoneAngleAttentionEnd
+  );
+
   const labelRadius = rOuter + 24;
   const leftAngle = -65;
   const centerAngle = 0;
@@ -543,6 +639,7 @@ function ApparentPowerGauge({
             </linearGradient>
           </defs>
 
+          {/* trilho + gradiente */}
           <path
             d={arcPathOuter}
             stroke={outerTrackColor}
@@ -557,6 +654,28 @@ function ApparentPowerGauge({
             fill="none"
             strokeLinecap="round"
           />
+
+          {/* linhas das zonas (IDEAL / ATENÇÃO / CRÍTICO) */}
+          <line
+            x1={tickIdealInner.x}
+            y1={tickIdealInner.y}
+            x2={tickIdealOuter.x}
+            y2={tickIdealOuter.y}
+            stroke={tickColor}
+            strokeWidth={6}
+            strokeLinecap="round"
+          />
+          <line
+            x1={tickAttentionInner.x}
+            y1={tickAttentionInner.y}
+            x2={tickAttentionOuter.x}
+            y2={tickAttentionOuter.y}
+            stroke={tickColor}
+            strokeWidth={6}
+            strokeLinecap="round"
+          />
+
+          {/* base branca */}
           <path
             d={arcPathBase}
             stroke={baseColor}
@@ -565,6 +684,7 @@ function ApparentPowerGauge({
             strokeLinecap="round"
           />
 
+          {/* ponteiro */}
           <line
             x1={cx}
             y1={cy}
@@ -576,14 +696,15 @@ function ApparentPowerGauge({
           />
           <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
 
+          {/* labels IDEAL / ATENÇÃO / CRÍTICO com fonte maior */}
           <text
             x={leftPos.x}
             y={leftPos.y}
             textAnchor="middle"
             dominantBaseline="central"
-            fontSize={14}
+            fontSize={22}
             className="font-semibold fill-emerald-500"
-            transform={`rotate(${leftAngle + 0}, ${leftPos.x - 5}, ${
+            transform={`rotate(${leftAngle}, ${leftPos.x - 5}, ${
               leftPos.y + 5
             })`}
           >
@@ -595,7 +716,7 @@ function ApparentPowerGauge({
             y={centerPos.y}
             textAnchor="middle"
             dominantBaseline="central"
-            fontSize={15}
+            fontSize={22}
             className="font-semibold fill-amber-500"
             transform={`rotate(${centerAngle}, ${centerPos.x}, ${
               centerPos.y
@@ -609,9 +730,9 @@ function ApparentPowerGauge({
             y={rightPos.y}
             textAnchor="middle"
             dominantBaseline="central"
-            fontSize={14}
+            fontSize={22}
             className="font-semibold fill-rose-500"
-            transform={`rotate(${rightAngle - 0}, ${rightPos.x + 5}, ${
+            transform={`rotate(${rightAngle}, ${rightPos.x + 5}, ${
               rightPos.y + 5
             })`}
           >
