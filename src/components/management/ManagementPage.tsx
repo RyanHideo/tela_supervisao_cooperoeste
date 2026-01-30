@@ -1005,12 +1005,17 @@ export function ManagementPage() {
         const groups = new Map<string, { s?: boolean; f?: boolean }>();
 
         for (const key of Object.keys(tags)) {
-          // padrão do dashboard: Mxx_S / Mxx_F
-          const match = /^M(\d+)_([SF])$/.exec(key);
+          // padrão: Mxx_S / Mxx_F (com ou sem prefixo CCM1_/CCM2_)
+          const match = /^(?:(CCM[12])_)?M(\d+)_([SF])$/.exec(key);
           if (!match) continue;
 
-          const id = match[1];
-          const suffix = match[2] as "S" | "F";
+          const tagPrefix = match[1];
+          const id = match[2];
+          const suffix = match[3] as "S" | "F";
+          const expectedPrefix = ccmId.toUpperCase();
+          if (tagPrefix && tagPrefix !== expectedPrefix) {
+            continue;
+          }
           const groupKey = `${ccmId}-${id}`; // garante separar CCM1 e CCM2
 
           const current = groups.get(groupKey) ?? {};

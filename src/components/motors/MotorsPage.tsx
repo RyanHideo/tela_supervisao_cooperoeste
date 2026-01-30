@@ -221,13 +221,18 @@ export function MotorsPage({ config }: Props) {
     };
 
     const groups = new Map<string, Aggregated>();
+    const expectedPrefix = ccmKey ? ccmKey.toUpperCase() : null;
 
     for (const [key, rawVal] of Object.entries(v)) {
-      const match = /^M(\d+)_([AFHS])$/.exec(key);
+      const match = /^(?:(CCM[12])_)?M(\d+)_([AFHS])$/.exec(key);
       if (!match) continue;
 
-      const num = match[1]; // "1"
-      const suffix = match[2] as "A" | "F" | "H" | "S";
+      const tagPrefix = match[1];
+      const num = match[2]; // "1"
+      const suffix = match[3] as "A" | "F" | "H" | "S";
+      if (expectedPrefix && tagPrefix && tagPrefix !== expectedPrefix) {
+        continue;
+      }
       const id = `M${num}`;
 
       const current = groups.get(id) ?? { id };

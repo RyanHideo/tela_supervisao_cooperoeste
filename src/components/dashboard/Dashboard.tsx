@@ -201,13 +201,16 @@ export function Dashboard({ config }: Props) {
   const motorInfo = useMemo(() => {
     // agrupa por "Mxx" (M75_S, M75_F, etc.)
     const groups = new Map<string, { s?: boolean; f?: boolean }>();
+    const expectedPrefix = config.key.toUpperCase();
 
     for (const key of Object.keys(v)) {
-      const match = /^M(\d+)_([AFHS])$/.exec(key);
+      const match = /^(?:(CCM[12])_)?M(\d+)_([AFHS])$/.exec(key);
       if (!match) continue;
 
-      const id = match[1]; // ex: "75"
-      const suffix = match[2] as "A" | "F" | "H" | "S";
+      const tagPrefix = match[1];
+      const id = match[2]; // ex: "75"
+      const suffix = match[3] as "A" | "F" | "H" | "S";
+      if (tagPrefix && tagPrefix !== expectedPrefix) continue;
       const raw = v[key];
 
       const current = groups.get(id) ?? {};
