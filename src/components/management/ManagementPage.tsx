@@ -700,6 +700,19 @@ function computeMotorsSummary(values: Record<string, unknown>) {
   return { active, alarm, off };
 }
 
+function pickNumber(
+  values: Record<string, unknown>,
+  keys: string[]
+): number | null {
+  for (const key of keys) {
+    const v = values?.[key];
+    if (typeof v === "number") {
+      return v;
+    }
+  }
+  return null;
+}
+
 function formatResetTooltip(ts: string | null | undefined) {
   if (!ts) return "Nenhum reset registrado";
   const d = new Date(ts);
@@ -798,9 +811,13 @@ export function ManagementPage() {
 
   // Tags combinadas de todos os CCMs (e por CCM)
   const multiTags = useMultiCcmTags({ intervalMs: 1500 }) as any;
-  const allTagValues = (multiTags?.values ?? {}) as Record<string, unknown>;
+  const valuesMerged = (multiTags?.valuesMerged ??
+    multiTags?.values ??
+    {}) as Record<string, unknown>;
   const valuesByCcm = (multiTags?.valuesByCcm ??
     null) as Record<string, Record<string, unknown>> | null;
+  const ccm1Values = (valuesByCcm?.ccm1 ?? {}) as Record<string, unknown>;
+  const ccm2Values = (valuesByCcm?.ccm2 ?? {}) as Record<string, unknown>;
 
   React.useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -1024,8 +1041,8 @@ export function ManagementPage() {
     }
 
     // fallback: lógica antiga em cima de values flatten
-    return computeMotorsSummary(allTagValues ?? {});
-  }, [valuesByCcm, allTagValues]);
+    return computeMotorsSummary(valuesMerged ?? {});
+  }, [valuesByCcm, valuesMerged]);
 
   const motorsData = motorsSummary;
 
@@ -1034,55 +1051,40 @@ export function ManagementPage() {
   const elevatorsValues = elevatorsLoadPct ?? Array(12).fill(0);
 
   // Valores das tags
-  const consumo1 =
-    typeof allTagValues?.["CCM1_CONSUMO_TOTAL"] === "number"
-      ? (allTagValues["CCM1_CONSUMO_TOTAL"] as number)
-      : null;
-  const consumo2 =
-    typeof allTagValues?.["CCM2_CONSUMO_TOTAL"] === "number"
-      ? (allTagValues["CCM2_CONSUMO_TOTAL"] as number)
-      : null;
+  const consumo1 = pickNumber(ccm1Values, [
+    "CCM1_CONSUMO_TOTAL",
+    "CONSUMO1",
+    "CONSUMO_TOTAL",
+  ]);
+  const consumo2 = pickNumber(ccm2Values, [
+    "CCM2_CONSUMO_TOTAL",
+    "CONSUMO2",
+    "CONSUMO_TOTAL",
+  ]);
 
   const fp1 =
-    typeof allTagValues?.["CCM1_FATOR_POTENCIA"] === "number"
-      ? (allTagValues["CCM1_FATOR_POTENCIA"] as number)
-      : 0;
+    pickNumber(ccm1Values, ["CCM1_FATOR_POTENCIA", "FP", "FP1"]) ?? 0;
 
   const fp2 =
-    typeof allTagValues?.["CCM2_FATOR_POTENCIA"] === "number"
-      ? (allTagValues["CCM2_FATOR_POTENCIA"] as number)
-      : 0;
+    pickNumber(ccm2Values, ["CCM2_FATOR_POTENCIA", "FP2", "FP"]) ?? 0;
 
   // CCM1 – aceita CCM1_POTENCIA ou PA_CCM1 ou PA1
   const kva1 =
-    typeof allTagValues?.["CCM1_POTENCIA"] === "number"
-      ? (allTagValues["CCM1_POTENCIA"] as number)
-      : typeof allTagValues?.["PA_CCM1"] === "number"
-      ? (allTagValues["PA_CCM1"] as number)
-      : typeof allTagValues?.["PA1"] === "number"
-      ? (allTagValues["PA1"] as number)
-      : 0;
+    pickNumber(ccm1Values, ["CCM1_POTENCIA", "PA_CCM1", "PA1", "PA"]) ?? 0;
 
   // // CCM2 – aceita tanto CCM2_POTENCIA quanto PA
   const kva2 =
-    typeof allTagValues?.["CCM2_POTENCIA"] === "number"
-      ? (allTagValues["CCM2_POTENCIA"] as number)
-      : typeof allTagValues?.["PA"] === "number"
-      ? (allTagValues["PA"] as number)
-      : 0;
+    pickNumber(ccm2Values, ["CCM2_POTENCIA", "PA2", "PA"]) ?? 0;
 
-  const temp1 =
-    typeof allTagValues?.["CCM1_TEMP_PAINEL"] === "number"
-      ? (allTagValues["CCM1_TEMP_PAINEL"] as number)
-      : null;
-  const temp2 =
-    typeof allTagValues?.["CCM2_TEMP_PAINEL"] === "number"
-      ? (allTagValues["CCM2_TEMP_PAINEL"] as number)
-      : null;
+  const temp1 = pickNumber(ccm1Values, ["CCM1_TEMP_PAINEL", "TEMP_PAINEL"]);
+  const temp2 = pickNumber(ccm2Values, ["CCM2_TEMP_PAINEL", "TEMP_PAINEL"]);
 
   const alarms = React.useMemo(
-    () => buildAlarms((allTagValues ?? {}) as Record<string, number | boolean | undefined>),
-    [allTagValues]
+    () =>
+      buildAlarms(
+        (valuesMerged ?? {}) as Record<string, number | boolean | undefined>
+      ),
+    [valuesMerged]
   );
   const hasAlarms = alarms.length > 0;
 

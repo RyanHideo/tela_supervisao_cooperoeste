@@ -11,10 +11,71 @@ type UseMultiCcmTagsResult = {
   ts?: string;
   values: NormalizedTags["values"];
   meta: NormalizedTags["meta"];
+  valuesMerged: NormalizedTags["values"];
+  metaMerged: NormalizedTags["meta"];
+  valuesByCcm: Record<CcmKey, NormalizedTags["values"]> | null;
+  metaByCcm: Record<CcmKey, NormalizedTags["meta"]> | null;
   loading: boolean;
   error: string | null;
   warning: string | null;
 };
+
+function applyLegacyAliases(
+  values: Record<string, number | boolean | undefined>
+) {
+  const aliasedValues: Record<string, number | boolean | undefined> = {
+    ...values,
+  };
+
+  // FATOR DE POTENCIA
+  if (
+    aliasedValues["CCM1_FATOR_POTENCIA"] === undefined &&
+    values["FP"] !== undefined
+  ) {
+    aliasedValues["CCM1_FATOR_POTENCIA"] = values["FP"];
+  }
+
+  if (
+    aliasedValues["CCM2_FATOR_POTENCIA"] === undefined &&
+    values["FP2"] !== undefined
+  ) {
+    aliasedValues["CCM2_FATOR_POTENCIA"] = values["FP2"];
+  }
+
+  // POTENCIA APARENTE (kVA)
+  if (
+    aliasedValues["CCM1_POTENCIA"] === undefined &&
+    (values["PA"] !== undefined || values["PA1"] !== undefined)
+  ) {
+    aliasedValues["CCM1_POTENCIA"] =
+      (values["PA"] as any) ?? (values["PA1"] as any);
+  }
+
+  if (
+    aliasedValues["CCM2_POTENCIA"] === undefined &&
+    values["PA2"] !== undefined
+  ) {
+    aliasedValues["CCM2_POTENCIA"] = values["PA2"];
+  }
+
+  // CONSUMO TOTAL (kWh)
+  if (
+    aliasedValues["CCM1_CONSUMO_TOTAL"] === undefined &&
+    (values["CONSUMO1"] !== undefined || values["CONSUMO_TOTAL"] !== undefined)
+  ) {
+    aliasedValues["CCM1_CONSUMO_TOTAL"] =
+      (values["CONSUMO1"] as any) ?? (values["CONSUMO_TOTAL"] as any);
+  }
+
+  if (
+    aliasedValues["CCM2_CONSUMO_TOTAL"] === undefined &&
+    values["CONSUMO2"] !== undefined
+  ) {
+    aliasedValues["CCM2_CONSUMO_TOTAL"] = values["CONSUMO2"];
+  }
+
+  return aliasedValues;
+}
 
 export function useMultiCcmTags(
   options: UseMultiCcmTagsOptions = {}
@@ -70,59 +131,8 @@ export function useMultiCcmTags(
     });
   }
 
-  // ---------- ALIASES PARA AS NOVAS TAGS DO BACK ----------
-  const aliasedValues: Record<string, number | boolean | undefined> = {
-    ...mergedValues,
-  };
-
-  // FATOR DE POTÊNCIA
-  if (
-    aliasedValues["CCM1_FATOR_POTENCIA"] === undefined &&
-    mergedValues["FP"] !== undefined
-  ) {
-    aliasedValues["CCM1_FATOR_POTENCIA"] = mergedValues["FP"];
-  }
-
-  if (
-    aliasedValues["CCM2_FATOR_POTENCIA"] === undefined &&
-    mergedValues["FP2"] !== undefined
-  ) {
-    aliasedValues["CCM2_FATOR_POTENCIA"] = mergedValues["FP2"];
-  }
-
-  // POTÊNCIA APARENTE (kVA)
-  if (
-    aliasedValues["CCM1_POTENCIA"] === undefined &&
-    (mergedValues["PA"] !== undefined || mergedValues["PA1"] !== undefined)
-  ) {
-    aliasedValues["CCM1_POTENCIA"] =
-      (mergedValues["PA"] as any) ?? (mergedValues["PA1"] as any);
-  }
-
-  if (
-    aliasedValues["CCM2_POTENCIA"] === undefined &&
-    mergedValues["PA2"] !== undefined
-  ) {
-    aliasedValues["CCM2_POTENCIA"] = mergedValues["PA2"];
-  }
-
-  // CONSUMO TOTAL (kWh)
-  if (
-    aliasedValues["CCM1_CONSUMO_TOTAL"] === undefined &&
-    (mergedValues["CONSUMO1"] !== undefined ||
-      mergedValues["CONSUMO_TOTAL"] !== undefined)
-  ) {
-    aliasedValues["CCM1_CONSUMO_TOTAL"] =
-      (mergedValues["CONSUMO1"] as any) ??
-      (mergedValues["CONSUMO_TOTAL"] as any);
-  }
-
-  if (
-    aliasedValues["CCM2_CONSUMO_TOTAL"] === undefined &&
-    mergedValues["CONSUMO2"] !== undefined
-  ) {
-    aliasedValues["CCM2_CONSUMO_TOTAL"] = mergedValues["CONSUMO2"];
-  }
+  // ---------- ALIASES PARA AS NOVAS TAGS DO BACK (APENAS MERGED) ----------
+  const aliasedValues = applyLegacyAliases(mergedValues);
 
   // ---------- TS MAIS RECENTE ----------
   const ts = data
@@ -134,10 +144,28 @@ export function useMultiCcmTags(
 
   const tsIso = ts ? new Date(ts).toISOString() : undefined;
 
+  const valuesByCcm = data
+    ? {
+        ccm1: data.ccm1?.values ?? {},
+        ccm2: data.ccm2?.values ?? {},
+      }
+    : null;
+
+  const metaByCcm = data
+    ? {
+        ccm1: data.ccm1?.meta ?? {},
+        ccm2: data.ccm2?.meta ?? {},
+      }
+    : null;
+
   return {
     ts: tsIso,
     values: aliasedValues,
     meta: mergedMeta,
+    valuesMerged: aliasedValues,
+    metaMerged: mergedMeta,
+    valuesByCcm,
+    metaByCcm,
     loading,
     error,
     warning,

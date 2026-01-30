@@ -21,7 +21,10 @@ export type NormalizedTags = {
 };
 
 /** Normaliza um mapa { tagName: RawTag } em NormalizedTags */
-function normalizeTagsMap(map: Record<string, RawTag>): NormalizedTags {
+function normalizeTagsMap(
+  map: Record<string, RawTag>,
+  fallbackTs?: string
+): NormalizedTags {
   const values: Record<string, number | boolean | undefined> = {};
   const meta: Record<string, RawTag> = {};
   let latestTs: string | undefined;
@@ -37,8 +40,19 @@ function normalizeTagsMap(map: Record<string, RawTag>): NormalizedTags {
     }
   }
 
+  let resolvedTs = latestTs;
+
+  if (fallbackTs) {
+    const fallbackMs = Date.parse(fallbackTs);
+    if (!Number.isNaN(fallbackMs)) {
+      if (!resolvedTs || fallbackMs > Date.parse(resolvedTs)) {
+        resolvedTs = fallbackTs;
+      }
+    }
+  }
+
   return {
-    ts: latestTs ?? new Date().toISOString(),
+    ts: resolvedTs ?? new Date().toISOString(),
     values,
     meta,
   };
@@ -46,10 +60,10 @@ function normalizeTagsMap(map: Record<string, RawTag>): NormalizedTags {
 
 /**
  * Busca as tags de UM CCM (endpoint:
- *   /api/modbus/ccm1/tags  ou  /api/modbus/ccm2/tags
+ *   /api/tags?ccm=ccm1  ou  /api/tags?ccm=ccm2
  */
 export async function getTagsValues(ccmKey: CcmKey): Promise<NormalizedTags> {
-  const resp = await fetch(apiUrl(`/modbus/${ccmKey}/tags`), {
+  const resp = await fetch(apiUrl(`/tags?ccm=${ccmKey}`), {
     cache: "no-store",
   });
 
@@ -59,40 +73,40 @@ export async function getTagsValues(ccmKey: CcmKey): Promise<NormalizedTags> {
     );
   }
 
-  // Esperado: { "M1_status": { name, value, ts, ... }, ... }
-  const data = (await resp.json()) as Record<string, RawTag>;
+  // Esperado: { ts, tags: { "M1_status": { name, value, ts, ... }, ... } }
+  const data = (await resp.json()) as
+    | { ts?: string; tags?: Record<string, RawTag> }
+    | Record<string, RawTag>;
 
-  return normalizeTagsMap(data);
+  const tagsMap =
+    data && typeof data === "object" && "tags" in data && data.tags
+      ? (data.tags as Record<string, RawTag>)
+      : (data as Record<string, RawTag>);
+
+  const ts =
+    data &&
+    typeof data === "object" &&
+    "ts" in data &&
+    typeof (data as any).ts === "string"
+      ? (data as any).ts
+      : undefined;
+
+  return normalizeTagsMap(tagsMap ?? {}, ts);
 }
 
 /**
- * Busca TODAS as tags de todos os CCMs (endpoint:
- *   /api/modbus/tags/all
- * Retorno esperado:
- * {
- *   "ccm1": { "M1_status": { ... }, ... },
- *   "ccm2": { "M1_corrente": { ... }, ... }
- * }
+ * Busca TODAS as tags de todos os CCMs via /api/tags?ccm=
  */
 export async function getAllTagsValues(): Promise<
   Record<CcmKey, NormalizedTags>
 > {
-  const resp = await fetch(apiUrl(`/modbus/tags/all`), {
-    cache: "no-store",
-  });
+  const [ccm1, ccm2] = await Promise.all([
+    getTagsValues("ccm1"),
+    getTagsValues("ccm2"),
+  ]);
 
-  if (!resp.ok) {
-    throw new Error(
-      `Falha ao obter tags de todos os CCMs (HTTP ${resp.status})`
-    );
-  }
-
-  const raw = (await resp.json()) as Record<string, Record<string, RawTag>>;
-
-  const result: Record<string, NormalizedTags> = {};
-  for (const [ccmKey, tagsMap] of Object.entries(raw)) {
-    result[ccmKey] = normalizeTagsMap(tagsMap);
-  }
-
-  return result as Record<CcmKey, NormalizedTags>;
+  return {
+    ccm1,
+    ccm2,
+  };
 }
