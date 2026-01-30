@@ -1185,7 +1185,7 @@ export function ManagementPage() {
       : null;
 
   const alarms = React.useMemo(
-    () => buildAlarms(allTagValues ?? ({} as any)),
+    () => buildAlarms((allTagValues ?? {}) as Record<string, number | boolean | undefined>),
     [allTagValues]
   );
   const hasAlarms = alarms.length > 0;

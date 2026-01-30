@@ -1,5 +1,5 @@
 // src/components/dashboard/Dashboard.tsx
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeContext";
 import type { CcmConfig } from "../../config/ccm";
 import { useTags } from "../../hooks/useTags";
@@ -30,7 +30,8 @@ export function Dashboard({ config }: Props) {
 
   // getNumber mais robusto (aceita number, boolean e string)
   const getNumber = (key: string) => {
-    const raw = v[key];
+    // Cast para permitir verificação de string, caso a API retorne algo inesperado
+    const raw = v[key] as number | boolean | string | undefined;
 
     if (typeof raw === "number") return raw;
     if (raw === true) return 1;
@@ -180,7 +181,7 @@ export function Dashboard({ config }: Props) {
     : "text-lg font-semibold text-slate-900";
 
   // ✅ NOVO: formatador para 2 casas decimais sem mudar layout
-  const formatNumeric = (value: unknown) => {
+  const formatNumeric = (value: unknown): ReactNode => {
     if (typeof value === "number") {
       return value.toFixed(2);
     }
@@ -193,7 +194,7 @@ export function Dashboard({ config }: Props) {
       return value;
     }
     // mantém comportamento anterior de mostrar "--" se undefined/null
-    return value ?? "--";
+    return (value ?? "--") as ReactNode;
   };
 
   // ---- RESUMO DE MOTORES: usando isTrue para S/F (funciona com DI) ----

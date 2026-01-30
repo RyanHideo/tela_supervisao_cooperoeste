@@ -49,11 +49,6 @@ const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
 
   const logo = isDark ? logoLight : logoDark;
 
-  function handleLogout() {
-    logout();
-    navigate("/login", { replace: true });
-  }
-
   return (
     <div className={rootClass}>
       <header className={headerClass}>
@@ -164,20 +159,6 @@ const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
             }
           >
             {isDark ? "☀️ Claro" : "🌙 Escuro"}
-          </button>
-
-          {/* Botão sair */}
-          <button
-            onClick={handleLogout}
-            className={
-              chipBase +
-              " " +
-              (isDark
-                ? "border-slate-700 hover:border-rose-500 hover:text-rose-300"
-                : "border-slate-300 hover:border-rose-500 hover:text-rose-600")
-            }
-          >
-            Sair
           </button>
         </div>
       </header>
