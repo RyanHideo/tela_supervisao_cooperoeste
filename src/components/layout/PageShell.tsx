@@ -1,7 +1,6 @@
 // src/components/layout/PageShell.tsx
 import type { PropsWithChildren } from "react";
 import { useNavigate } from "react-router-dom";
-import { logout } from "../../auth/auth";
 import type { CcmConfig, CcmKey } from "../../config/ccm";
 
 // Logos
@@ -67,7 +66,7 @@ const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
           />
           <div className="hidden sm:block">
             <h1 className="text-2xl font-semibold tracking-tight">
-              Painel de Gestão • CooperOeste 
+              Painel de Gestão • CooperOeste • UNIDADE 1
             </h1>
           </div>
         </div>
@@ -84,7 +83,7 @@ const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
             }
           >
             {tabs.map((tab) => {
-              const active = tab.key === config.key;
+              const active = tab.key === config.key && section !== "gestao";
               return (
                 <button
                   key={tab.key}
@@ -101,6 +100,18 @@ const sectionTabs: { key: SectionKey; label: string; path: string }[] = [
                 </button>
               );
             })}
+            <button
+              onClick={() => navigate(`/ccm/${config.key}/gestao`)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                section === "gestao"
+                  ? "bg-emerald-500 text-slate-950"
+                  : isDark
+                  ? "text-slate-300 hover:bg-slate-800"
+                  : "text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              Geral
+            </button>
           </div>
 
           {/* Nav Dashboard / Motores – agora visível também no mobile */}

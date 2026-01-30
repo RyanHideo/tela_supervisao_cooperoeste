@@ -1258,7 +1258,7 @@ export function ManagementPage() {
           >
             <header className="flex items-center justify-between mb-1">
               <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight">
-                Eficiência Energética
+                Economia Energética
               </h2>
               <span
                 className={`text-[11px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass}`}
@@ -1516,11 +1516,11 @@ export function ManagementPage() {
                 <span
                   className={`text-[8px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
                 >
-                  CCM 1 · Trafo 1000 kVA
+                  CCM 1 · Trafo 750 kVA
                 </span>
                 <ApparentPowerGauge
                   value={kva1 as number}
-                  max={1000}
+                  max={750}
                   isDark={isDark}
                 />
               </div>
@@ -1528,11 +1528,11 @@ export function ManagementPage() {
                 <span
                   className={`text-[8px] sm:text-xs xl:text-sm uppercase tracking-wide ${subtleTextClass} mb-1`}
                 >
-                  CCM 2 · Trafo 1200 kVA
+                  CCM 2 · Trafo 300 kVA
                 </span>
                 <ApparentPowerGauge
                   value={kva2 as number}
-                  max={1200}
+                  max={300}
                   isDark={isDark}
                 />
               </div>
