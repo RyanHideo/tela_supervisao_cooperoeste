@@ -5,6 +5,7 @@ import type { CcmConfig, CcmKey } from "../../config/ccm";
 import { useTheme } from "../../theme/ThemeContext";
 import { useTags } from "../../hooks/useTags";
 import { postResetHourmeter } from "../../api/commands";
+import { apiUrl } from "../../api/api";
 
 type MotorStatus = "ON" | "OFF" | "ALARM" | "STARTING";
 
@@ -44,19 +45,6 @@ type ApiMotorOverview = {
   fault: number; // 0=OFF, 1=STARTING, 2=ON, 3=ALARM
   hours: number;
 };
-
-/**
- * BASE DA API
- * Usa env do Vite se existir (VITE_API_BASE ou VITE_REACT_APP_API_BASE),
- * senão cai em http://localhost:9090.
- */
-const RAW_BASE =
-  (import.meta as any).env?.VITE_API_BASE ??
-  (import.meta as any).env?.VITE_REACT_APP_API_BASE ??
-  "http://localhost:9090";
-
-// remove barra no final pra evitar "//backend"
-const API_BASE = RAW_BASE.replace(/\/+$/, "");
 
 // Fallback para quando não houver nada
 const FAKE_MOTORS: Motor[] = [
@@ -156,7 +144,7 @@ export function MotorsPage({ config }: Props) {
   useEffect(() => {
     let cancelled = false;
     // EventSource é reconectado automaticamente pelo browser em caso de queda
-    const es = new EventSource(`${API_BASE}/api/motors/overview/stream`);
+    const es = new EventSource(apiUrl("/motors/overview/stream"));
 
     es.onmessage = (evt) => {
       if (cancelled) return;

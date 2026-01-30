@@ -1,5 +1,7 @@
 // src/api/motors.ts
 
+import { apiUrl } from "./api";
+
 export type MotorOverviewItem = {
   name: string;
   ccm: string;     // "ccm1" | "ccm2"
@@ -9,11 +11,8 @@ export type MotorOverviewItem = {
   hours: number;
 };
 
-const RAW_BASE = import.meta.env.REACT_APP_API_BASE ?? "http://localhost:9090";
-const API_BASE = RAW_BASE.replace(/\/+$/, "");
-
 export async function getMotorsOverview(): Promise<MotorOverviewItem[]> {
-  const r = await fetch(`${API_BASE}/api/motors/overview/stream`, {
+  const r = await fetch(apiUrl("/motors/overview/stream"), {
     cache: "no-store",
   });
   if (!r.ok) {

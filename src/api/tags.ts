@@ -2,6 +2,7 @@
 // Funções para buscar tags do backend Modbus
 
 import type { CcmKey } from "../config/ccm";
+import { apiUrl } from "./api";
 
 /** Tag “crua” vinda da API */
 export type RawTag = {
@@ -18,12 +19,6 @@ export type NormalizedTags = {
   values: Record<string, number | boolean | undefined>;
   meta: Record<string, RawTag>;
 };
-
-// Vite: variável definida no .env => VITE_API_BASE=http://localhost:9090
-const RAW_BASE =
-  import.meta.env.VITE_API_BASE ?? "http://localhost:9090";
-// remove barra no final pra evitar "//api"
-const API_BASE = RAW_BASE.replace(/\/+$/, "");
 
 /** Normaliza um mapa { tagName: RawTag } em NormalizedTags */
 function normalizeTagsMap(map: Record<string, RawTag>): NormalizedTags {
@@ -54,7 +49,7 @@ function normalizeTagsMap(map: Record<string, RawTag>): NormalizedTags {
  *   /api/modbus/ccm1/tags  ou  /api/modbus/ccm2/tags
  */
 export async function getTagsValues(ccmKey: CcmKey): Promise<NormalizedTags> {
-  const resp = await fetch(`${API_BASE}/api/modbus/${ccmKey}/tags`, {
+  const resp = await fetch(apiUrl(`/modbus/${ccmKey}/tags`), {
     cache: "no-store",
   });
 
@@ -82,7 +77,7 @@ export async function getTagsValues(ccmKey: CcmKey): Promise<NormalizedTags> {
 export async function getAllTagsValues(): Promise<
   Record<CcmKey, NormalizedTags>
 > {
-  const resp = await fetch(`${API_BASE}/api/modbus/tags/all`, {
+  const resp = await fetch(apiUrl(`/modbus/tags/all`), {
     cache: "no-store",
   });
 
