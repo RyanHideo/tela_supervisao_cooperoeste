@@ -341,17 +341,6 @@ function PowerFactorGauge({
   const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
-  const labelRadius = rOuter + 28;
-  const centerRadius = rOuter + 34;
-
-  const leftAngle = -65;
-  const centerAngle = 0;
-  const rightAngle = 65;
-
-  const leftPos = polarToCartesian(cx, cy, labelRadius, leftAngle);
-  const centerPos = polarToCartesian(cx, cy, centerRadius, centerAngle);
-  const rightPos = polarToCartesian(cx, cy, labelRadius, rightAngle);
-
   return (
     <div className="flex flex-col items-center gap-2 px-4">
       <svg
@@ -412,49 +401,6 @@ function PowerFactorGauge({
           strokeLinecap="round"
         />
         <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
-
-        {/* labels CRÍTICO / IDEAL / CRÍTICO */}
-        <text
-          x={leftPos.x}
-          y={leftPos.y}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize={22}
-          className="font-semibold"
-          fill="#ef4444"
-          transform={`rotate(${leftAngle}, ${leftPos.x - 5}, ${
-            leftPos.y + 5
-          })`}
-        >
-          CRÍTICO
-        </text>
-
-        <text
-          x={centerPos.x}
-          y={centerPos.y + 5}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize={24}
-          className="font-semibold"
-          fill="#22c55e"
-        >
-          IDEAL
-        </text>
-
-        <text
-          x={rightPos.x}
-          y={rightPos.y}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize={22}
-          className="font-semibold"
-          fill="#ef4444"
-          transform={`rotate(${rightAngle}, ${rightPos.x + 5}, ${
-            rightPos.y + 5
-          })`}
-        >
-          CRÍTICO
-        </text>
       </svg>
 
       <div className="flex flex-col items-center -mt-1">
@@ -495,13 +441,15 @@ function ApparentPowerGauge({
   const gradId = React.useId();
   const { polarToCartesian, describeArc } = useArcHelpers();
 
+  // Gráfico vai até 140% da capacidade nominal
+  const gaugeMax = max * 1.4;
   const min = 0;
-  const clamped = Math.max(min, Math.min(max, value));
-  const t = (clamped - min) / (max - min);
+  const clampedVisual = Math.max(min, Math.min(gaugeMax, value));
+  const t = (clampedVisual - min) / (gaugeMax - min);
   const angle = -90 + t * 180;
 
-  const displayValue = clamped.toFixed(0);
-  const pct = ((clamped / max) * 100).toFixed(0);
+  const displayValue = value.toFixed(0);
+  const pct = ((value / max) * 100).toFixed(0);
 
   const outerTrackColor = isDark ? "#1f2937" : "#e5e7eb";
   const baseColor = isDark ? "#020617" : "#f9fafb";
@@ -522,17 +470,6 @@ function ApparentPowerGauge({
   const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
-  const labelRadius = rOuter + 24;
-  const centerRadius = rOuter + 32;
-
-  const leftAngle = -65;
-  const centerAngle = 0;
-  const rightAngle = 65;
-
-  const leftPos = polarToCartesian(cx, cy, labelRadius, leftAngle);
-  const centerPos = polarToCartesian(cx, cy, centerRadius, centerAngle);
-  const rightPos = polarToCartesian(cx, cy, labelRadius, rightAngle);
-
   return (
     <div className="flex flex-col items-center gap-3 px-4">
       <div className="relative">
@@ -551,8 +488,10 @@ function ApparentPowerGauge({
               gradientUnits="userSpaceOnUse"
             >
               <stop offset="0%" stopColor="#22c55e" />
-              <stop offset="40%" stopColor="#eab308" />
-              <stop offset="75%" stopColor="#eab308" />
+              <stop offset="65%" stopColor="#22c55e" />
+              <stop offset="72%" stopColor="#eab308" />
+              <stop offset="92%" stopColor="#eab308" />
+              <stop offset="96%" stopColor="#ef4444" />
               <stop offset="100%" stopColor="#ef4444" />
             </linearGradient>
           </defs>
@@ -593,49 +532,6 @@ function ApparentPowerGauge({
             strokeLinecap="round"
           />
           <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
-
-          {/* labels IDEAL / ATENÇÃO / CRÍTICO */}
-          <text
-            x={leftPos.x}
-            y={leftPos.y}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={22}
-            className="font-semibold fill-emerald-500"
-            transform={`rotate(${leftAngle}, ${leftPos.x - 5}, ${
-              leftPos.y + 5
-            })`}
-          >
-            IDEAL
-          </text>
-
-          <text
-            x={centerPos.x}
-            y={centerPos.y + 5}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={22}
-            className="font-semibold fill-amber-500"
-            transform={`rotate(${centerAngle}, ${centerPos.x}, ${
-              centerPos.y
-            })`}
-          >
-            ATENÇÃO
-          </text>
-
-          <text
-            x={rightPos.x}
-            y={rightPos.y}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={22}
-            className="font-semibold fill-rose-500"
-            transform={`rotate(${rightAngle}, ${rightPos.x + 5}, ${
-              rightPos.y + 5
-            })`}
-          >
-            CRÍTICO
-          </text>
 
           <circle cx={cx} cy={cy} r={10} fill={pointerColor} />
         </svg>
@@ -1167,7 +1063,7 @@ export function ManagementPage() {
       ? (allTagValues["PA1"] as number)
       : 0;
 
-  // CCM2 – aceita tanto CCM2_POTENCIA quanto PA
+  // // CCM2 – aceita tanto CCM2_POTENCIA quanto PA
   const kva2 =
     typeof allTagValues?.["CCM2_POTENCIA"] === "number"
       ? (allTagValues["CCM2_POTENCIA"] as number)
@@ -1511,6 +1407,27 @@ export function ManagementPage() {
             <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight text-center mb-2">
               Potência aparente
             </h2>
+            <div className="flex flex-col items-center mb-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight text-center">
+                </h2>
+              </div>
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-[10px] sm:text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span className={subtleTextClass}>Ideal (≤100%)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                  <span className={subtleTextClass}>Atenção (100-120%)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  <span className={subtleTextClass}>Crítico (&gt;121%)</span>
+                </div>
+              </div>
+            </div>
+
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="w-full flex flex-col items-center">
                 <span
@@ -1540,8 +1457,7 @@ export function ManagementPage() {
             <p
               className={`text-[11px] sm:text-xs xl:text-sm ${subtleTextClass}`}
             >
-              Gauges mostram a potência aparente atual em relação à capacidade
-              do trafo de cada CCM.
+
             </p>
           </section>
 
@@ -1554,6 +1470,22 @@ export function ManagementPage() {
             <h2 className="text-base sm:text-lg xl:text-xl font-semibold tracking-tight text-center mb-2">
               Fator de potência
             </h2>
+            <div className="flex flex-col items-center mb-4">
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-[10px] sm:text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span className={subtleTextClass}>Ideal</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                  <span className={subtleTextClass}>Atenção</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  <span className={subtleTextClass}>Crítico</span>
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col items-center">
                 <span
