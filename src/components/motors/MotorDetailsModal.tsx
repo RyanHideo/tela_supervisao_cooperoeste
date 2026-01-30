@@ -60,6 +60,8 @@ export function MotorDetailsModal({ motor, onClose }: Props) {
       ? "text-rose-500"
       : motor.status === "Ligado"
       ? "text-emerald-500"
+      : motor.status === "Partindo"
+      ? "text-blue-500"
       : infoTextColor;
 
   return (

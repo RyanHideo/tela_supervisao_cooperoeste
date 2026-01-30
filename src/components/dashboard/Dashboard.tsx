@@ -28,9 +28,20 @@ export function Dashboard({ config }: Props) {
   const v = values ?? {};
   const m = meta ?? {};
 
+  // getNumber mais robusto (aceita number, boolean e string)
   const getNumber = (key: string) => {
     const raw = v[key];
-    return typeof raw === "number" ? raw : undefined;
+
+    if (typeof raw === "number") return raw;
+    if (raw === true) return 1;
+    if (raw === false) return 0;
+
+    if (typeof raw === "string") {
+      const parsed = Number(raw.replace(",", "."));
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+
+    return undefined;
   };
 
   // tentamos pegar a chave do CCM (ex: "ccm1" / "ccm2")
@@ -80,11 +91,11 @@ export function Dashboard({ config }: Props) {
     };
   }, [error, hasData, ts, isDark]);
 
-  // helper pra interpretar coil como booleano
+  // helper pra interpretar coil/DI como booleano
   const isTrue = (raw: unknown): boolean =>
     raw === true || raw === 1 || raw === 1.0 || raw === "1";
 
-  // ====== STATUS / ALARMES ======
+  // ====== STATUS / ALARMES CCM ======
   const emergenciaAtiva = isTrue(v["STATUS_EMERGENCIA"]);
   const faltaFase = isTrue(v["STATUS_FALTA_FASE"]);
   const superAquecimento = isTrue(v["STATUS_SUPER_AQUECIMENTO"]);
@@ -168,10 +179,27 @@ export function Dashboard({ config }: Props) {
     ? "text-lg font-semibold text-slate-50"
     : "text-lg font-semibold text-slate-900";
 
-  // ---- RESUMO DE MOTORES: calculado a partir de Mxx_S e Mxx_F ----
+  // ✅ NOVO: formatador para 2 casas decimais sem mudar layout
+  const formatNumeric = (value: unknown) => {
+    if (typeof value === "number") {
+      return value.toFixed(2);
+    }
+    if (typeof value === "string") {
+      const parsed = Number(value.replace(",", "."));
+      if (!Number.isNaN(parsed)) {
+        return parsed.toFixed(2);
+      }
+      // se não der pra converter, mostra a string original
+      return value;
+    }
+    // mantém comportamento anterior de mostrar "--" se undefined/null
+    return value ?? "--";
+  };
+
+  // ---- RESUMO DE MOTORES: usando isTrue para S/F (funciona com DI) ----
   const motorInfo = useMemo(() => {
-    // agrupa por "Mxx"
-    const groups = new Map<string, { s?: number; f?: number }>();
+    // agrupa por "Mxx" (M75_S, M75_F, etc.)
+    const groups = new Map<string, { s?: boolean; f?: boolean }>();
 
     for (const key of Object.keys(v)) {
       const match = /^M(\d+)_([AFHS])$/.exec(key);
@@ -179,12 +207,11 @@ export function Dashboard({ config }: Props) {
 
       const id = match[1]; // ex: "75"
       const suffix = match[2] as "A" | "F" | "H" | "S";
-      const val = getNumber(key);
-      if (val === undefined) continue;
+      const raw = v[key];
 
       const current = groups.get(id) ?? {};
-      if (suffix === "S") current.s = val;
-      if (suffix === "F") current.f = val;
+      if (suffix === "S") current.s = isTrue(raw); // ligado?
+      if (suffix === "F") current.f = isTrue(raw); // falha?
       groups.set(id, current);
     }
 
@@ -194,8 +221,8 @@ export function Dashboard({ config }: Props) {
     let desligados = 0;
 
     for (const motor of groups.values()) {
-      const fault = !!motor.f && motor.f !== 0;
-      const on = !!motor.s && motor.s !== 0;
+      const fault = motor.f === true;
+      const on = motor.s === true;
 
       if (fault) falha++;
       else if (on) ativos++;
@@ -321,11 +348,10 @@ export function Dashboard({ config }: Props) {
                               ? "border-amber-500/40 bg-amber-950/40 text-amber-100"
                               : "border-amber-200 bg-amber-50 text-amber-900";
                           case "MEDIUM":
+                          default:
                             return isDark
                               ? "border-sky-500/40 bg-sky-950/40 text-sky-100"
                               : "border-sky-200 bg-sky-50 text-sky-900";
-                          default:
-                            return "";
                         }
                       })();
 
@@ -410,17 +436,23 @@ export function Dashboard({ config }: Props) {
             <div className="mt-4 grid grid-cols-3 gap-4 text-center text-xs">
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L1-L2</span>
-                <span className={valueTextClass}>{v["V1-V2"] ?? "--"}</span>
+                <span className={valueTextClass}>
+                  {formatNumeric(v["V1-V2"])}
+                </span>
                 <span className={unitLabelClass}>V</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L2-L3</span>
-                <span className={valueTextClass}>{v["V2-V3"] ?? "--"}</span>
+                <span className={valueTextClass}>
+                  {formatNumeric(v["V2-V3"])}
+                </span>
                 <span className={unitLabelClass}>V</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L3-L1</span>
-                <span className={valueTextClass}>{v["V3-V1"] ?? "--"}</span>
+                <span className={valueTextClass}>
+                  {formatNumeric(v["V3-V1"])}
+                </span>
                 <span className={unitLabelClass}>V</span>
               </div>
             </div>
@@ -435,17 +467,23 @@ export function Dashboard({ config }: Props) {
             <div className="mt-4 grid grid-cols-3 gap-4 text-center text-xs">
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L1-N</span>
-                <span className={valueTextClass}>{v["V1-N"] ?? "--"}</span>
+                <span className={valueTextClass}>
+                  {formatNumeric(v["V1-N"])}
+                </span>
                 <span className={unitLabelClass}>V</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L2-N</span>
-                <span className={valueTextClass}>{v["V2-N"] ?? "--"}</span>
+                <span className={valueTextClass}>
+                  {formatNumeric(v["V2-N"])}
+                </span>
                 <span className={unitLabelClass}>V</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L3-N</span>
-                <span className={valueTextClass}>{v["V3-N"] ?? "--"}</span>
+                <span className={valueTextClass}>
+                  {formatNumeric(v["V3-N"])}
+                </span>
                 <span className={unitLabelClass}>V</span>
               </div>
             </div>
@@ -460,17 +498,23 @@ export function Dashboard({ config }: Props) {
             <div className="mt-4 grid grid-cols-3 gap-4 text-center text-xs">
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L1</span>
-                <span className={valueTextClass}>{v["L1"] ?? "--"}</span>
+                <span className={valueTextClass}>
+                  {formatNumeric(v["L1"])}
+                </span>
                 <span className={unitLabelClass}>A</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L2</span>
-                <span className={valueTextClass}>{v["L2"] ?? "--"}</span>
+                <span className={valueTextClass}>
+                  {formatNumeric(v["L2"])}
+                </span>
                 <span className={unitLabelClass}>A</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className={smallLabelClass}>L3</span>
-                <span className={valueTextClass}>{v["L3"] ?? "--"}</span>
+                <span className={valueTextClass}>
+                  {formatNumeric(v["L3"])}
+                </span>
                 <span className={unitLabelClass}>A</span>
               </div>
             </div>

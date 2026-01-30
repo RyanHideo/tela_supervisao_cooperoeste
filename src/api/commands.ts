@@ -39,3 +39,29 @@ export async function postClearEmergency(): Promise<void> {
     throw new Error(`Falha ao limpar comando de emergência (HTTP ${r.status})`);
   }
 }
+
+/**
+ * Envia comando para zerar o horímetro de um motor específico.
+ * @param motorName Nome do motor (ex: "Elevador 02 - Moega")
+ * @param ccm "ccm1" ou "ccm2"
+ */
+export async function postResetHourmeter(
+  motorName: string,
+  ccm: CcmKey
+): Promise<void> {
+  const url = apiUrl(`/motors/reset-hourmeter`);
+  const r = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ motorName, ccm }),
+  });
+
+  if (!r.ok) {
+    const errorText = await r.text().catch(() => "Erro desconhecido");
+    throw new Error(
+      `Falha ao enviar comando para zerar horímetro (HTTP ${r.status}): ${errorText}`
+    );
+  }
+}

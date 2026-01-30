@@ -1,11 +1,12 @@
 // src/components/motors/MotorsPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { MotorDetailsModal } from "./MotorDetailsModal";
-import type { CcmConfig } from "../../config/ccm";
+import type { CcmConfig, CcmKey } from "../../config/ccm";
 import { useTheme } from "../../theme/ThemeContext";
 import { useTags } from "../../hooks/useTags";
+import { postResetHourmeter } from "../../api/commands";
 
-type MotorStatus = "ON" | "OFF" | "ALARM";
+type MotorStatus = "ON" | "OFF" | "ALARM" | "STARTING";
 
 type Motor = {
   id: string; // ex: "M1" ou pode ser o próprio nome
@@ -38,9 +39,9 @@ type Props = {
 type ApiMotorOverview = {
   name: string;
   ccm: string;
-  status: number; // 0/1
+  status: number; // 0=OFF, 1=ON
   current: number; // A
-  fault: number; // 0 = ok, !=0 falha
+  fault: number; // 0=OFF, 1=STARTING, 2=ON, 3=ALARM
   hours: number;
 };
 
@@ -118,12 +119,14 @@ const FAKE_MOTORS: Motor[] = [
 function statusDot(status: MotorStatus, isDark: boolean) {
   if (status === "ON") return isDark ? "bg-emerald-400" : "bg-emerald-500";
   if (status === "ALARM") return isDark ? "bg-rose-400" : "bg-rose-500";
+  if (status === "STARTING") return isDark ? "bg-blue-400" : "bg-blue-500";
   return isDark ? "bg-slate-500" : "bg-slate-400";
 }
 
 function statusText(status: MotorStatus) {
   if (status === "ON") return "Ligado";
   if (status === "ALARM") return "Falha/Alarme";
+  if (status === "STARTING") return "Partindo";
   return "Desligado";
 }
 
@@ -132,10 +135,11 @@ export function MotorsPage({ config }: Props) {
   const isDark = theme === "dark";
 
   const [selectedMotor, setSelectedMotor] = useState<MotorSummary | null>(null);
+  const [resettingMotorId, setResettingMotorId] = useState<string | null>(null);
 
   // estado de filtro/ordenação
   const [statusFilter, setStatusFilter] = useState<
-    "ALL" | "ON" | "OFF" | "ALARM"
+    "ALL" | "ON" | "OFF" | "ALARM" | "STARTING"
   >("ALL");
   const [sortByName, setSortByName] = useState(false);
   const [sortByHours, setSortByHours] = useState(false);
@@ -180,6 +184,43 @@ export function MotorsPage({ config }: Props) {
       es.close();
     };
   }, []);
+
+  const ccmKey = useMemo((): CcmKey | undefined => {
+    const rawCcmId =
+      (config as any).id ?? (config as any).ccm ?? (config as any).key ?? "";
+    if (typeof rawCcmId === "string" && rawCcmId.length > 0) {
+      return rawCcmId as CcmKey;
+    }
+    return undefined;
+  }, [config]);
+
+  async function handleResetHourmeter(motor: Motor) {
+    if (!ccmKey) {
+      alert("Erro: CCM não pôde ser identificado para enviar o comando.");
+      return;
+    }
+
+    if (resettingMotorId) return;
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja zerar o horímetro do motor "${motor.name}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setResettingMotorId(motor.id);
+    try {
+      await postResetHourmeter(motor.name, ccmKey);
+      alert("Comando para zerar horímetro enviado com sucesso.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`Erro ao enviar comando para zerar horímetro: ${message}`);
+    } finally {
+      setResettingMotorId(null);
+    }
+  }
 
   // ================== FALLBACK PELO MAPEAMENTO Mxx_* ==================
   const motorsFromTags: Motor[] = useMemo(() => {
@@ -290,11 +331,17 @@ export function MotorsPage({ config }: Props) {
         }
 
         return listForThisCcm.map((m, index) => {
-          const fault = typeof m.fault === "number" && m.fault !== 0;
-
+          // 0: Desligado
+          // 1: Partindo
+          // 2: Funcionando
+          // 3: Falha
+          // O estado detalhado vem no campo 'fault'
           let status: MotorStatus = "OFF";
-          if (fault) status = "ALARM";
-          else if (m.status === 1) status = "ON";
+          const code = m.fault;
+
+          if (code === 1) status = "STARTING";
+          else if (code === 2) status = "ON";
+          else if (code === 3) status = "ALARM";
 
           let cargaPercent = 0;
           if (maxCurrent > 0 && typeof m.current === "number") {
@@ -308,7 +355,7 @@ export function MotorsPage({ config }: Props) {
             name: m.name,
             status,
             hours: typeof m.hours === "number" ? m.hours : 0,
-            alarmText: fault ? "Falha" : "OK",
+            alarmText: status === "ALARM" ? "Falha" : "OK",
             cargaPercent,
             currentA: typeof m.current === "number" ? m.current : null,
             description: m.name,
@@ -444,7 +491,7 @@ export function MotorsPage({ config }: Props) {
             value={statusFilter}
             onChange={(e) =>
               setStatusFilter(
-                e.target.value as "ALL" | "ON" | "OFF" | "ALARM"
+                e.target.value as "ALL" | "ON" | "OFF" | "ALARM" | "STARTING"
               )
             }
             className={
@@ -456,6 +503,7 @@ export function MotorsPage({ config }: Props) {
           >
             <option value="ALL">Todos</option>
             <option value="ON">Ligados</option>
+            <option value="STARTING">Partindo</option>
             <option value="OFF">Desligados</option>
             <option value="ALARM">Falha/Alarme</option>
           </select>
@@ -518,6 +566,8 @@ export function MotorsPage({ config }: Props) {
               ? "font-medium text-rose-400"
               : motor.status === "ON"
               ? "font-medium text-emerald-500"
+              : motor.status === "STARTING"
+              ? "font-medium text-blue-500"
               : valueBaseClass;
 
           const alarmValueClass =
@@ -602,16 +652,19 @@ export function MotorsPage({ config }: Props) {
                 <button
                   onClick={(e) => {
                     e.stopPropagation(); // não abrir modal ao clicar no botão
-                    // aqui depois você pluga o backend pra zerar horímetro
+                    handleResetHourmeter(motor);
                   }}
+                  disabled={!!resettingMotorId}
                   className={
-                    "w-fit rounded-full px-3 py-1 text-xs font-medium shadow-sm " +
+                    "w-fit rounded-full px-3 py-1 text-xs font-medium shadow-sm transition-opacity " +
                     (isDark
-                      ? "bg-slate-800 text-slate-100 hover:bg-slate-700"
-                      : "bg-slate-100 text-slate-800 hover:bg-slate-200")
+                      ? "bg-slate-800 text-slate-100 hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-700/60"
+                      : "bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:cursor-not-allowed disabled:bg-slate-200/60")
                   }
                 >
-                  Zerar horímetro
+                  {resettingMotorId === motor.id
+                    ? "Zerando..."
+                    : "Zerar horímetro"}
                 </button>
               </div>
             </article>
@@ -629,4 +682,3 @@ export function MotorsPage({ config }: Props) {
     </div>
   );
 }
-

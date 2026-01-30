@@ -8,8 +8,6 @@ import {
 } from "react-router-dom";
 import { PageShell } from "./components/layout/PageShell";
 import { Dashboard } from "./components/dashboard/Dashboard";
-import { ProtectedRoute } from "./auth/ProtectedRoute";
-import { LoginPage } from "./pages/LoginPage";
 
 import {
   CCM_CONFIGS,
@@ -82,50 +80,32 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Login público */}
-        <Route path="/login" element={<LoginPage />} />
-
-
-          
-    
-                {/* Página de Gestão protegida */}
+        {/* Página de Gestão */}
         <Route
           path="/ccm/:ccmId/gestao"
-          element={
-            <ProtectedRoute>
-              <CcmManagementRoute />
-            </ProtectedRoute>
-          }
+          element={<CcmManagementRoute />}
         />
 
-        {/* Redireciona "/" para o CCM default (dashboard) */}
+        {/* Redireciona "/" para o CCM default (gestao) */}
         <Route
           path="/"
-          element={<Navigate to={`/ccm/${DEFAULT_CCM}`} replace />}
+          element={<Navigate to={`/ccm/${DEFAULT_CCM}/gestao`} replace />}
         />
 
-        {/* Visão geral (dashboard) protegida */}
+        {/* Visão geral (dashboard) */}
         <Route
           path="/ccm/:ccmId"
-          element={
-            <ProtectedRoute>
-              <CcmDashboardRoute />
-            </ProtectedRoute>
-          }
+          element={<CcmDashboardRoute />}
         />
 
-        {/* Página de Motores protegida */}
+        {/* Página de Motores */}
         <Route
           path="/ccm/:ccmId/motores"
-          element={
-            <ProtectedRoute>
-              <CcmMotorsRoute />
-            </ProtectedRoute>
-          }
+          element={<CcmMotorsRoute />}
         />
 
         {/* Fallback para qualquer rota desconhecida */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to={`/ccm/${DEFAULT_CCM}/gestao`} replace />} />
       </Routes>
     </BrowserRouter>
   );

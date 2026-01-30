@@ -115,7 +115,7 @@ function ElevatorsChart({ values, isDark }: ElevatorsChartProps) {
 
   return (
     <div className="mt-3 flex flex-col gap-4 h-48 sm:h-52 xl:h-56 px-3">
-      <div className="relative flex-1 flex items-end gap-4">
+      <div className="relative flex-1 flex items-end gap-1 sm:gap-4">
         <div
           className="absolute inset-x-0 bottom-0 h-px"
           style={{
@@ -335,14 +335,12 @@ function PowerFactorGauge({
   const rOuter = 160;
   const rBase = 120;
 
-  // ponteiro mais comprido, chegando perto do arco colorido
   const pointerLen = rOuter - 10;
 
   const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
   const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
-  // labels: CRÍTICO / IDEAL / CRÍTICO – com IDEAL um pouco mais alto
   const labelRadius = rOuter + 28;
   const centerRadius = rOuter + 34;
 
@@ -424,7 +422,9 @@ function PowerFactorGauge({
           fontSize={22}
           className="font-semibold"
           fill="#ef4444"
-          transform={`rotate(${leftAngle}, ${leftPos.x - 5}, ${leftPos.y + 5})`}
+          transform={`rotate(${leftAngle}, ${leftPos.x - 5}, ${
+            leftPos.y + 5
+          })`}
         >
           CRÍTICO
         </text>
@@ -516,14 +516,12 @@ function ApparentPowerGauge({
   const rOuter = 160;
   const rBase = 120;
 
-  // ponteiro mais comprido, encostando no gauge
   const pointerLen = rOuter - 10;
 
   const arcPathOuter = describeArc(cx, cy, rOuter, -90, 90);
   const arcPathBase = describeArc(cx, cy, rBase, -90, 90);
   const pointerTip = polarToCartesian(cx, cy, pointerLen, angle);
 
-  // labels IDEAL / ATENÇÃO / CRÍTICO
   const labelRadius = rOuter + 24;
   const centerRadius = rOuter + 32;
 
@@ -763,42 +761,46 @@ function TemperatureCard({ label, value, isDark }: TemperatureCardProps) {
 
 /** ==================== FUNÇÕES AUXILIARES DE LÓGICA ==================== */
 
-// Soma motores dos DOIS CCMs (sem prefixo, CCM1_ e CCM2_)
-function computeMotorsSummary(
-  values: Record<string, number | boolean | undefined>
-) {
+// Soma motores dos DOIS CCMs (aceita Mx_S/F, CCM1_Mx_S/F, CCM2_Mx_S/F)
+function computeMotorsSummary(values: Record<string, unknown>) {
+  const groups = new Map<string, { s?: boolean; f?: boolean }>();
+
+  for (const key of Object.keys(values ?? {})) {
+    // opcionalmente começa com CCM1_ ou CCM2_
+    const match = /^(?:(CCM[12]_))?M(\d+)_([SF])$/.exec(key);
+    if (!match) continue;
+
+    const prefix = match[1] ?? ""; // "" ou "CCM1_" / "CCM2_"
+    const id = match[2]; // "1", "2", ...
+    const suffix = match[3] as "S" | "F";
+
+    const groupKey = `${prefix}${id}`; // ex: "1", "CCM1_1", "CCM2_1"
+    const current = groups.get(groupKey) ?? {};
+    const raw = (values as any)[key];
+
+    if (suffix === "S") current.s = isTrue(raw);
+    if (suffix === "F") current.f = isTrue(raw);
+
+    groups.set(groupKey, current);
+  }
+
   let active = 0;
   let alarm = 0;
   let off = 0;
-  let seenAny = false;
 
-  const prefixes = ["", "CCM1_", "CCM2_"] as const;
+  for (const motor of groups.values()) {
+    const hasAlarm = motor.f === true;
+    const isOn = motor.s === true;
 
-  for (const prefix of prefixes) {
-    for (let i = 1; i <= 84; i++) {
-      const s = values[`${prefix}M${i}_S`];
-      const f = values[`${prefix}M${i}_F`];
-
-      if (s === undefined && f === undefined) {
-        continue;
-      }
-
-      seenAny = true;
-
-      const isOn = isTrue(s);
-      const hasAlarm = isTrue(f);
-
-      if (hasAlarm) {
-        alarm++;
-      } else if (isOn) {
-        active++;
-      } else {
-        off++;
-      }
+    if (hasAlarm) {
+      alarm++;
+    } else if (isOn) {
+      active++;
+    } else {
+      off++;
     }
   }
 
-  if (!seenAny) return { active: 0, alarm: 0, off: 0 };
   return { active, alarm, off };
 }
 
@@ -898,8 +900,11 @@ export function ManagementPage() {
   const [consumptionError, setConsumptionError] =
     React.useState<string | null>(null);
 
-  // Tags combinadas de todos os CCMs
-  const { values: allTagValues } = useMultiCcmTags({ intervalMs: 1500 });
+  // Tags combinadas de todos os CCMs (e por CCM)
+  const multiTags = useMultiCcmTags({ intervalMs: 1500 }) as any;
+  const allTagValues = (multiTags?.values ?? {}) as Record<string, unknown>;
+  const valuesByCcm = (multiTags?.valuesByCcm ??
+    null) as Record<string, Record<string, unknown>> | null;
 
   React.useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -1073,11 +1078,59 @@ export function ManagementPage() {
     second: "2-digit",
   });
 
-  // Resumo de motores baseado nas tags (TODOS os CCMs)
-  const motorsSummary = React.useMemo(
-    () => computeMotorsSummary(allTagValues),
-    [allTagValues]
-  );
+  // 🔧 Resumo de motores baseado nas tags (TODOS os CCMs)
+  const motorsSummary = React.useMemo(() => {
+    // Se o hook expuser valuesByCcm (ccm1, ccm2...), usamos isso
+    if (valuesByCcm && Object.keys(valuesByCcm).length > 0) {
+      let active = 0;
+      let alarm = 0;
+      let off = 0;
+
+      Object.entries(valuesByCcm).forEach(([ccmId, tagsObj]) => {
+        if (!tagsObj) return;
+        const tags = tagsObj as Record<string, unknown>;
+        const groups = new Map<string, { s?: boolean; f?: boolean }>();
+
+        for (const key of Object.keys(tags)) {
+          // padrão do dashboard: Mxx_S / Mxx_F
+          const match = /^M(\d+)_([SF])$/.exec(key);
+          if (!match) continue;
+
+          const id = match[1];
+          const suffix = match[2] as "S" | "F";
+          const groupKey = `${ccmId}-${id}`; // garante separar CCM1 e CCM2
+
+          const current = groups.get(groupKey) ?? {};
+          const raw = (tags as any)[key];
+
+          if (suffix === "S") current.s = isTrue(raw);
+          if (suffix === "F") current.f = isTrue(raw);
+
+          groups.set(groupKey, current);
+        }
+
+        // conta para esse CCM
+        for (const motor of groups.values()) {
+          const hasAlarm = motor.f === true;
+          const isOn = motor.s === true;
+
+          if (hasAlarm) {
+            alarm++;
+          } else if (isOn) {
+            active++;
+          } else {
+            off++;
+          }
+        }
+      });
+
+      return { active, alarm, off };
+    }
+
+    // fallback: lógica antiga em cima de values flatten
+    return computeMotorsSummary(allTagValues ?? {});
+  }, [valuesByCcm, allTagValues]);
+
   const motorsData = motorsSummary;
 
   const productiveValue = productiveEfficiencyPct ?? 0; // 0–100
@@ -1086,52 +1139,55 @@ export function ManagementPage() {
 
   // Valores das tags
   const consumo1 =
-    typeof allTagValues["CCM1_CONSUMO_TOTAL"] === "number"
-      ? allTagValues["CCM1_CONSUMO_TOTAL"]
+    typeof allTagValues?.["CCM1_CONSUMO_TOTAL"] === "number"
+      ? (allTagValues["CCM1_CONSUMO_TOTAL"] as number)
       : null;
   const consumo2 =
-    typeof allTagValues["CCM2_CONSUMO_TOTAL"] === "number"
-      ? allTagValues["CCM2_CONSUMO_TOTAL"]
+    typeof allTagValues?.["CCM2_CONSUMO_TOTAL"] === "number"
+      ? (allTagValues["CCM2_CONSUMO_TOTAL"] as number)
       : null;
 
   const fp1 =
-    typeof allTagValues["CCM1_FATOR_POTENCIA"] === "number"
-      ? allTagValues["CCM1_FATOR_POTENCIA"]
+    typeof allTagValues?.["CCM1_FATOR_POTENCIA"] === "number"
+      ? (allTagValues["CCM1_FATOR_POTENCIA"] as number)
       : 0;
 
   const fp2 =
-    typeof allTagValues["CCM2_FATOR_POTENCIA"] === "number"
-      ? allTagValues["CCM2_FATOR_POTENCIA"]
+    typeof allTagValues?.["CCM2_FATOR_POTENCIA"] === "number"
+      ? (allTagValues["CCM2_FATOR_POTENCIA"] as number)
       : 0;
 
   // CCM1 – aceita CCM1_POTENCIA ou PA_CCM1 ou PA1
   const kva1 =
-    typeof allTagValues["CCM1_POTENCIA"] === "number"
-      ? allTagValues["CCM1_POTENCIA"]
-      : typeof allTagValues["PA_CCM1"] === "number"
-      ? allTagValues["PA_CCM1"]
-      : typeof allTagValues["PA1"] === "number"
-      ? allTagValues["PA1"]
+    typeof allTagValues?.["CCM1_POTENCIA"] === "number"
+      ? (allTagValues["CCM1_POTENCIA"] as number)
+      : typeof allTagValues?.["PA_CCM1"] === "number"
+      ? (allTagValues["PA_CCM1"] as number)
+      : typeof allTagValues?.["PA1"] === "number"
+      ? (allTagValues["PA1"] as number)
       : 0;
 
   // CCM2 – aceita tanto CCM2_POTENCIA quanto PA
   const kva2 =
-    typeof allTagValues["CCM2_POTENCIA"] === "number"
-      ? allTagValues["CCM2_POTENCIA"]
-      : typeof allTagValues["PA"] === "number"
-      ? allTagValues["PA"]
+    typeof allTagValues?.["CCM2_POTENCIA"] === "number"
+      ? (allTagValues["CCM2_POTENCIA"] as number)
+      : typeof allTagValues?.["PA"] === "number"
+      ? (allTagValues["PA"] as number)
       : 0;
 
   const temp1 =
-    typeof allTagValues["CCM1_TEMP_PAINEL"] === "number"
-      ? allTagValues["CCM1_TEMP_PAINEL"]
+    typeof allTagValues?.["CCM1_TEMP_PAINEL"] === "number"
+      ? (allTagValues["CCM1_TEMP_PAINEL"] as number)
       : null;
   const temp2 =
-    typeof allTagValues["CCM2_TEMP_PAINEL"] === "number"
-      ? allTagValues["CCM2_TEMP_PAINEL"]
+    typeof allTagValues?.["CCM2_TEMP_PAINEL"] === "number"
+      ? (allTagValues["CCM2_TEMP_PAINEL"] as number)
       : null;
 
-  const alarms = React.useMemo(() => buildAlarms(allTagValues), [allTagValues]);
+  const alarms = React.useMemo(
+    () => buildAlarms(allTagValues ?? ({} as any)),
+    [allTagValues]
+  );
   const hasAlarms = alarms.length > 0;
 
   const resetTooltipCcm1 = formatResetTooltip(resetCcm1);
