@@ -118,6 +118,10 @@ function statusText(status: MotorStatus) {
   return "Desligado";
 }
 
+// Helper para interpretar status (boolean ou number)
+const isTrue = (raw: unknown): boolean =>
+  raw === true || raw === 1 || raw === 1.0 || raw === "1";
+
 export function MotorsPage({ config }: Props) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -236,12 +240,17 @@ export function MotorsPage({ config }: Props) {
       const id = `M${num}`;
 
       const current = groups.get(id) ?? { id };
-      const nVal = typeof rawVal === "number" ? rawVal : undefined;
 
-      if (suffix === "A" && nVal !== undefined) current.a = nVal;
-      if (suffix === "F" && nVal !== undefined) current.f = nVal;
-      if (suffix === "H" && nVal !== undefined) current.h = nVal;
-      if (suffix === "S" && nVal !== undefined) current.s = nVal;
+      // Valores numéricos diretos
+      if (suffix === "A" && typeof rawVal === "number") current.a = rawVal;
+      if (suffix === "H" && typeof rawVal === "number") current.h = rawVal;
+
+      // Status e Falha podem vir como boolean ou number
+      // Convertemos para 1 (true) ou 0 (false/undefined) para manter compatibilidade
+      if (suffix === "F" && rawVal !== undefined)
+        current.f = isTrue(rawVal) ? 1 : 0;
+      if (suffix === "S" && rawVal !== undefined)
+        current.s = isTrue(rawVal) ? 1 : 0;
 
       groups.set(id, current);
     }
@@ -324,6 +333,18 @@ export function MotorsPage({ config }: Props) {
         }
 
         return listForThisCcm.map((m, index) => {
+          const id = `M${index + 1}`;
+
+          // Tenta encontrar dados atualizados nas tags (prioridade para status/valores das tags)
+          const tagData = motorsFromTags.find((mt) => mt.id === id);
+          if (tagData) {
+            return {
+              ...tagData,
+              name: m.name, // Mantém o nome descritivo do overview
+              description: m.name,
+            };
+          }
+
           // 0: Desligado
           // 1: Partindo
           // 2: Funcionando
@@ -344,7 +365,7 @@ export function MotorsPage({ config }: Props) {
           }
 
           return {
-            id: `M${index + 1}`,
+            id,
             name: m.name,
             status,
             hours: typeof m.hours === "number" ? m.hours : 0,

@@ -100,13 +100,48 @@ export async function getTagsValues(ccmKey: CcmKey): Promise<NormalizedTags> {
 export async function getAllTagsValues(): Promise<
   Record<CcmKey, NormalizedTags>
 > {
-  const [ccm1, ccm2] = await Promise.all([
-    getTagsValues("ccm1"),
-    getTagsValues("ccm2"),
-  ]);
+  const resp = await fetch(apiUrl("/tags/unified"), {
+    cache: "no-store",
+  });
+
+  if (!resp.ok) {
+    throw new Error(`Falha ao obter tags unificadas (HTTP ${resp.status})`);
+  }
+
+  const data = (await resp.json()) as
+    | { ts?: string; tags?: Record<string, RawTag> }
+    | Record<string, RawTag>;
+
+  const tagsMap =
+    data && typeof data === "object" && "tags" in data && data.tags
+      ? (data.tags as Record<string, RawTag>)
+      : (data as Record<string, RawTag>);
+
+  const ts =
+    data &&
+    typeof data === "object" &&
+    "ts" in data &&
+    typeof (data as any).ts === "string"
+      ? (data as any).ts
+      : undefined;
+
+  const mapCcm1: Record<string, RawTag> = {};
+  const mapCcm2: Record<string, RawTag> = {};
+
+  if (tagsMap) {
+    for (const [key, tag] of Object.entries(tagsMap)) {
+      if (key.endsWith("__ccm1")) {
+        const cleanKey = key.replace("__ccm1", "");
+        mapCcm1[cleanKey] = { ...tag, name: cleanKey };
+      } else if (key.endsWith("__ccm2")) {
+        const cleanKey = key.replace("__ccm2", "");
+        mapCcm2[cleanKey] = { ...tag, name: cleanKey };
+      }
+    }
+  }
 
   return {
-    ccm1,
-    ccm2,
+    ccm1: normalizeTagsMap(mapCcm1, ts),
+    ccm2: normalizeTagsMap(mapCcm2, ts),
   };
 }
